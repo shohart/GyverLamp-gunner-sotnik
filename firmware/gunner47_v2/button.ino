@@ -57,6 +57,11 @@ void buttonTick()
     //FastLED.clear();
     //delay(1);
 
+    #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+      if (random_on && FavoritesManager::FavoritesRunning)
+        selectedSettings = 1U;
+    #endif //RANDOM_SETTINGS_IN_CYCLE_MODE
+
     #if (USE_MQTT)
     if (espMode == 1U)
     {
@@ -79,6 +84,11 @@ void buttonTick()
     eepromTimeout = millis();
     //FastLED.clear();
     //delay(1);
+
+    #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+      if (random_on && FavoritesManager::FavoritesRunning)
+        selectedSettings = 1U;
+    #endif //RANDOM_SETTINGS_IN_CYCLE_MODE
 
     #if (USE_MQTT)
     if (espMode == 1U)
@@ -140,6 +150,9 @@ void buttonTick()
   // семикратное нажатие
   if (clickCount == 7U)  // if (ONflag &&                   // смена рабочего режима лампы: с WiFi точки доступа на WiFi клиент или наоборот
   {
+    #ifdef RESET_WIFI_ON_ESP_MODE_CHANGE
+      if (espMode) wifiManager.resetSettings();                             // сброс сохранённых SSID и пароля (сброс настроек подключения к роутеру)
+    #endif
     espMode = (espMode == 0U) ? 1U : 0U;
     EepromManager::SaveEspMode(&espMode);
 
