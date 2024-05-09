@@ -1,12 +1,12 @@
 //
-// =================== ВНИМАНИЕ !!! =========================
-//  Все настройки делаются на закладке Constants.h
+// ======================= ВНИМАНИЕ !!! =============================
+//  Все настройки делаются на вкладке Constants.h
 //  Почитайте там то, что на русском языке написано.
-//  Либо ничего не трогайте, если собирали, как в оригинале.
+//  Либо ничего не трогайте, если собирали, как в оригинальном видео.
 //
 //  решение проблем можно поискать тут под спойлерами:
 //  https://community.alexgyver.ru/goto/post?id=33652
-// ==========================================================
+// ==================================================================
 
 // Ссылка для менеджера плат:
 // https://arduino.esp8266.com/stable/package_esp8266com_index.json
@@ -22,6 +22,16 @@
 */
 
 /*
+  Версия 2.86² эффектов в 1
+  - В режиме Цикл эффекты теперь запускаются на случайных, но удачных настройках. Можно это отключить, если не требуется.
+  - Добавлены эффекты Цветные драже, Плазменная лампа, Северное сияние, Шары, Магма.
+  - Удалён эффект Блуждающий кубик (версию прошивки повышаем, теперь больше нет оправданий, что этот эффект должен быть вместе со всеми 26ю изначальными).
+  - Собраны воедино надоевшие эффекты Радуга вертикальная+горизонтальная+диагональная, Звездопад+Метель.
+  - Убран запрет на установку времени ожидания подключения к роутеру более 7 секунл (для этого нужно брать библиотеки из архива с прошивкой).
+  - В эффекте Белый свет добавлен вертикальный вариант ("направленный свет") для бегунка Масштаб от 50 и выше.
+  - Исправлен режим Часы для узких матриц от 11 до 14 пикселей в высоту (не работал).
+  - Появилась поддержка команд "RND_" от приложения для управления режимом случайных настроек и возврату к настройкам по умолчанию (а приложение такое пока ещё не появилось).
+  
   Версия 1.5.85 эффектов в 1
   - Добавлены эффекты Фея, Источник.
   - Удалён эффект Мячики со шлейфом (это была просто копия Мячиков для демонстрации на других настройках бегунка Скорость).
@@ -30,7 +40,7 @@
   - Исправлен баг в библиотеке FastLed в реализации функции blur2d. Рекомендуется положить библиотеки из архива с прошивкой в папку библиотек программы Arduino IDE.
   - Убран запрет поиска ip-адреса лампы, когда лампа работает в виде точки доступа без роутера (в режиме ESP_MODE = 0).
   - Добавлена возможность передать приложению имя лампы (на случай, когда у вас в домашней сети несколько ламп). Приложение должно поддерживать данную функцию.
-
+  
   Версия 1.5.84 эффекта в 1
   - Добавлены эффекты Кипение, Притяжение, Капли на стекле, Дымовые шашки, Тихий океан, Nexus.
   - Убраны эффекты Белый огонь, Цветной огонь, Бeлый вoдoпaд, Быстрый пульс, Пульсирующая кoмeтa (копии и похожие эффекты уже не интересны даже в режиме Цикл, и так эффектов многовато).
@@ -47,7 +57,7 @@
   Версия 1.5.81 эффект в 1
   - Удалён эффект Белая комета.
   - Временно удалён эффект Пульсирующая комета.
-  - Временно добавлен эффект Осциллятор.
+  - Временно? добавлен эффект Осциллятор.
   - Обновлена поддержка приложения Blynk для управления текстом бегущей строки и передачи "секретных команд".
   - Эффекты Дым лучше адаптированы для ламп с плохим рассеивателем.
   - Найдена и убрана причина того, что в режиме Цикл лампа полностью гасла между эффектами.
@@ -326,6 +336,12 @@ time_t manualTimeShift;
 time_t phoneTimeLastSync;
 #endif
 
+#if defined(USE_RANDOM_SETS_IN_APP) || defined(RANDOM_SETTINGS_IN_CYCLE_MODE)
+uint8_t selectedSettings = 0U;
+#endif //#if defined(USE_RANDOM_SETS_IN_APP) || defined(RANDOM_SETTINGS_IN_CYCLE_MODE)
+#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+uint8_t random_on = RANDOM_SETTINGS_IN_CYCLE_MODE;
+#endif //RANDOM_SETTINGS_IN_CYCLE_MODE
 
 #ifdef ESP_USE_BUTTON
 GButton touch(BTN_PIN, LOW_PULL, NORM_OPEN); // для физической (не сенсорной) кнопки нужно поменять LOW_PULL на HIGH_PULL. ну и кнопку нужно ставить без резистора между находящимися рядом пинами D2 и GND
@@ -462,10 +478,12 @@ void setup()
       shuffleFavoriteModes[i] = i;
 #endif
 
-
   // EEPROM
   EepromManager::InitEepromSettings(                        // инициализация EEPROM; запись начального состояния настроек, если их там ещё нет; инициализация настроек лампы значениями из EEPROM
     modes, alarms, &espMode, &ONflag, &dawnMode, &currentMode, &buttonEnabled,
+    #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+    &random_on,
+    #endif //ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
     &(FavoritesManager::ReadFavoritesFromEeprom),
     &(FavoritesManager::SaveFavoritesToEeprom),
     &(restoreSettings)); // не придумал ничего лучше, чем делать восстановление настроек по умолчанию в обработчике инициализации EepromManager
@@ -490,6 +508,7 @@ void setup()
     }
 
     WiFi.softAP(AP_NAME, AP_PASS);
+    //WiFi.softAP(AP_NAME+String("_MQTTid_")+String(ESP.getChipId(), HEX), AP_PASS);// для тех, кому нужно узнать чип-id для mqtt. HEX - в шестнадцатиричном формате, DEC - в десятичном.
 
     LOG.println(F("Старт в режиме WiFi точки доступа"));
     LOG.print(F("IP адрес: "));
@@ -527,10 +546,10 @@ void setup()
       CaptivePortalManager::captivePortalCalled = true;
       wifiManager.setBreakAfterConfig(true);                // перезагрузка после ввода и сохранения имени и пароля WiFi сети
       showWarning(CRGB::Yellow, 1000U, 500U);               // мигание жёлтым цветом 0,5 секунды (1 раз) - нужно ввести параметры WiFi сети для подключения
-      #ifdef WARNING_IF_NO_TIME
-        noTimeWarningShow();
-      #endif
     }
+    #ifdef WARNING_IF_NO_TIME
+      noTimeWarningShow();
+    #endif
 
     wifiManager.setConnectTimeout(ESP_CONN_TIMEOUT);        // установка времени ожидания подключения к WiFi сети, затем старт WiFi точки доступа
     wifiManager.setConfigPortalTimeout(ESP_CONF_TIMEOUT);   // установка времени работы WiFi точки доступа, затем перезагрузка; отключить watchdog?
@@ -552,7 +571,11 @@ void setup()
         {
           LOG.println(F("Время ожидания ввода SSID и пароля от WiFi сети или подключения к WiFi сети превышено\nЛампа будет перезагружена в режиме WiFi точки доступа!\n"));
 
+          #ifdef RESET_WIFI_ON_ESP_MODE_CHANGE
+            if (espMode) wifiManager.resetSettings();                             // сброс сохранённых SSID и пароля (сброс настроек подключения к роутеру)
+          #endif
           espMode = (espMode == 0U) ? 1U : 0U;
+          
           EepromManager::SaveEspMode(&espMode);
 
           LOG.printf_P(PSTR("Рабочий режим лампы изменён и сохранён в энергонезависимую память\nНовый рабочий режим: ESP_MODE = %d, %s\nРестарт...\n"),
@@ -615,14 +638,14 @@ void setup()
   changePower();
   loadingFlag = true;
 
-  TextTicker = "датути";
+  TextTicker = RUNNING_TEXT_DEFAULT;
 }
 
 
 void loop()
 {
   parseUDP();
-  if (Painting == 0) {
+if (Painting == 0) {
 
   effectsTick();
 
@@ -631,14 +654,13 @@ void loop()
 
   //#ifdef USE_NTP
   #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
-  timeTick();
+  //if (millis() > 30 * 1000U) можно попытаться оттянуть срок первой попытки синхронизации времени на 30 секунд, чтобы роутер успел не только загрузиться, но и соединиться с интернетом
+    timeTick();
   #endif
 
   #ifdef ESP_USE_BUTTON
-  if (buttonEnabled)
-  {
+  //if (buttonEnabled) в процедуре ведь есть эта проверка
     buttonTick();
-  }
   #endif
 
   #ifdef OTA
@@ -655,6 +677,10 @@ void loop()
       //#ifdef USE_NTP
       #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
       , &dawnFlag
+      #endif
+      #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+      , &random_on
+      , &selectedSettings
       #endif
       ))
   {
@@ -692,6 +718,10 @@ void loop()
   #if defined(GENERAL_DEBUG) && GENERAL_DEBUG_TELNET
   handleTelnetClient();
   #endif
-  }
-  ESP.wdtFeed();                                            // пнуть собаку
+}//if (Painting == 0)
+  ESP.wdtFeed();
 }
+
+#ifndef WIFI_MANAGER_LIBRARY_PROPER_TEST
+!!!!!!!!!!!!!!!!!!!!!!!!!!!   библиотеки из архива с прошивкой не были помещены в папку библиотек Arduino IDE. так вы прошивку не загрузите.
+#endif
