@@ -40,6 +40,19 @@ void parseUDP()
   }
 }
 
+void updateSets()
+{
+      loadingFlag = true;
+      settChanged = true;
+      eepromTimeout = millis();
+
+      #if (USE_MQTT)
+      if (espMode == 1U)
+      {
+        MqttManager::needToPublish = true;
+      }
+      #endif
+}
 
 void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutput)
 {
@@ -84,24 +97,21 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       EepromManager::SaveModesSettings(&currentMode, modes);
       memcpy(buff, &inputBuffer[3], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 4
       currentMode = (uint8_t)atoi(buff);
-      loadingFlag = true;
-      settChanged = true;
-      eepromTimeout = millis();
+      updateSets();
+      sendCurrent(inputBuffer);
       //FastLED.clear();
       //delay(1);
-      sendCurrent(inputBuffer);
-      FastLED.setBrightness(modes[currentMode].Brightness);
-
-      #if (USE_MQTT)
-      if (espMode == 1U)
-      {
-        MqttManager::needToPublish = true;
-      }
-      #endif
 
       #ifdef USE_BLYNK_PLUS
       updateRemoteBlynkParams();
       #endif
+
+      #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+        if (random_on && FavoritesManager::FavoritesRunning)
+          selectedSettings = 1U;
+      #endif //RANDOM_SETTINGS_IN_CYCLE_MODE
+      
+      FastLED.setBrightness(modes[currentMode].Brightness);
     }
 
     else if (!strncmp_P(inputBuffer, PSTR("BRI"), 3))
@@ -130,18 +140,8 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
     {
       memcpy(buff, &inputBuffer[3], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 4
       modes[currentMode].Speed = atoi(buff);
-      loadingFlag = true;
-      settChanged = true;
-      eepromTimeout = millis();
+      updateSets();
       sendCurrent(inputBuffer);
-
-      #if (USE_MQTT)
-      if (espMode == 1U)
-      {
-        MqttManager::needToPublish = true;
-      }
-      #endif
-
       #ifdef USE_BLYNK_PLUS
       updateRemoteBlynkParams();
       #endif
@@ -151,60 +151,55 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
     {
       memcpy(buff, &inputBuffer[3], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 4
       modes[currentMode].Scale = atoi(buff);
-      loadingFlag = true;
-      settChanged = true;
-      eepromTimeout = millis();
+      updateSets();
       sendCurrent(inputBuffer);
-
-      #if (USE_MQTT)
-      if (espMode == 1U)
-      {
-        MqttManager::needToPublish = true;
-      }
-      #endif
-
-      #ifdef USE_BLYNK_PLUS
-      updateRemoteBlynkParams();
-      #endif
-      }
-
-    else if (!strncmp_P(inputBuffer, PSTR("P_ON"), 4))
-    {
-      ONflag = true;
-      loadingFlag = true;
-      settChanged = true;
-      eepromTimeout = millis();
-      changePower();
-      sendCurrent(inputBuffer);
-
-      #if (USE_MQTT)
-      if (espMode == 1U)
-      {
-        MqttManager::needToPublish = true;
-      }
-      #endif
       #ifdef USE_BLYNK_PLUS
       updateRemoteBlynkParams();
       #endif
     }
 
+    else if (!strncmp_P(inputBuffer, PSTR("P_ON"), 4))
+    {
+      if (dawnFlag) {
+        manualOff = true; 
+        dawnFlag = false;
+        sendCurrent(inputBuffer);
+      }
+      else {
+        ONflag = true;
+        updateSets();
+        changePower();
+        sendCurrent(inputBuffer);
+        #ifdef USE_BLYNK_PLUS
+        updateRemoteBlynkParams();
+        #endif
+      }  
+    }
+
     else if (!strncmp_P(inputBuffer, PSTR("P_OFF"), 5))
     {
-      ONflag = false;
-      settChanged = true;
-      eepromTimeout = millis();
-      changePower();
-      sendCurrent(inputBuffer);
-
-      #if (USE_MQTT)
-      if (espMode == 1U)
-      {
-        MqttManager::needToPublish = true;
+      if (dawnFlag) {
+        manualOff = true; 
+        dawnFlag = false;
+        sendCurrent(inputBuffer);
       }
-      #endif
-      #ifdef USE_BLYNK_PLUS
-      updateRemoteBlynkParams();
-      #endif
+      else {
+        ONflag = false;
+        settChanged = true;
+        eepromTimeout = millis();
+        changePower();
+        sendCurrent(inputBuffer);
+
+        #if (USE_MQTT)
+        if (espMode == 1U)
+        {
+          MqttManager::needToPublish = true;
+        }
+        #endif
+        #ifdef USE_BLYNK_PLUS
+        updateRemoteBlynkParams();
+        #endif
+      }
     }
 
     else if (!strncmp_P(inputBuffer, PSTR("ALM_"), 4)) { // сокращаем GET и SET для ускорения регулярного цикла
@@ -376,7 +371,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         EepromManager::SaveButtonEnabled(&buttonEnabled);
         sendCurrent(inputBuffer);
       }
-      else if (strstr_P(inputBuffer, PSTR("OFF")) - inputBuffer == 4)
+      else// if (strstr_P(inputBuffer, PSTR("OFF")) - inputBuffer == 4)
       {
         buttonEnabled = false;
         EepromManager::SaveButtonEnabled(&buttonEnabled);
@@ -400,7 +395,47 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       }
       FastLED.setBrightness(ALLbri);
       loadingFlag = true;
-    }    
+    }
+    #ifdef USE_RANDOM_SETS_IN_APP
+    else if (!strncmp_P(inputBuffer, PSTR("RND_"), 4)) // управление включением случайных настроек
+    {
+       if (!strncmp_P(inputBuffer, PSTR("RND_0"), 5)) // вернуть настройки по умолчанию текущему эффекту
+       {
+         setModeSettings();
+         updateSets();
+         sendCurrent(inputBuffer);
+       }
+       else if (!strncmp_P(inputBuffer, PSTR("RND_1"), 5)) // выбрать случайные настройки текущему эффекту
+       { // раньше была идея, что будут числа RND_1, RND_2, RND_3 - выбор из предустановленных настроек, но потом всё свелось к единственному варианту случайных настроек
+         selectedSettings = 1U;
+         updateSets();
+       }
+       else if (!strncmp_P(inputBuffer, PSTR("RND_Z"), 5)) // вернуть настройки по умолчанию всем эффектам
+       {
+         restoreSettings();
+         selectedSettings = 0U;
+         updateSets();
+         sendCurrent(inputBuffer);
+         #ifdef USE_BLYNK
+         updateRemoteBlynkParams();
+         #endif
+       }
+       #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+       else if (!strncmp_P(inputBuffer, PSTR("RND_ON"), 6)) // включить выбор случайных настроек в режиме Цикл
+       {
+         random_on = 1U;
+         EepromManager::Save_random_on ( &random_on );
+         showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+       }
+       else if (!strncmp_P(inputBuffer, PSTR("RND_OFF"), 7)) // отключить выбор случайных настроек в режиме Цикл
+       {
+         random_on = 0U;
+         EepromManager::Save_random_on ( &random_on );
+         showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+       }
+       #endif //#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+    }
+    #endif //#ifdef USE_RANDOM_SETS_IN_APP
     else if (!strncmp_P(inputBuffer, PSTR("LIST"), 4)) // передача списка эффектов по запросу от приложения (если поддерживается приложением)
     {
        memcpy(buff, &inputBuffer[4], strlen(inputBuffer));  // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 5
@@ -426,15 +461,9 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
              #ifdef USE_DEFAULT_SETTINGS_RESET
              // и здесь же после успешной отправки списка эффектов делаем сброс настроек эффектов на значения по умолчанию
              restoreSettings();
-             loadingFlag = true;
-             settChanged = true;
-             eepromTimeout = millis();
-
-             #if (USE_MQTT)
-             if (espMode == 1U)
-             {
-               MqttManager::needToPublish = true;
-             }
+             updateSets();
+             #ifdef USE_BLYNK_PLUS
+             updateRemoteBlynkParams();
              #endif
              #endif
 
@@ -515,15 +544,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
           }
           else if (!strncmp_P(inputBuffer, PSTR("TXT-reset=effects"), 17)){
             restoreSettings();
-            loadingFlag = true;
-            settChanged = true;
-            eepromTimeout = millis();
-            #if (USE_MQTT)
-            if (espMode == 1U)
-            {
-              MqttManager::needToPublish = true;
-            }
-            #endif
+            updateSets();
             showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
             #ifdef USE_BLYNK
             updateRemoteBlynkParams();
@@ -620,6 +641,22 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
               #endif                
             }
           }
+          #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-random="), 11)){
+            if (strstr_P(inputBuffer, PSTR("on")) - inputBuffer == 11)
+            {
+              random_on = 1U;
+              EepromManager::Save_random_on ( &random_on );
+              showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+            }
+            else if (strstr_P(inputBuffer, PSTR("off")) - inputBuffer == 11)
+            {
+              random_on = 0U;
+              EepromManager::Save_random_on ( &random_on );
+              showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+            }
+          }
+          #endif //#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
         #endif // USE_SECRET_COMMANDS
         else
         {  
