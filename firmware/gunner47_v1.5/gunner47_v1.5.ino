@@ -8,14 +8,21 @@
 */
 
 /*
-  Версия 1.5:
+  Версия 1.5.1 : 53 эффекта в 1
+  - Изменён способ отправки списка эффектов в лампу. Теперь он не ограничен размером буфера, а ограничен хз чем.
+  - Список эффектов расширен до 52 штук
+  - Добавлены новые функции, поддерживаемые приложением от @Koteyka (рисование, бегущая строка)
+  
+  Версия 1.5: 
+  этот же список с гиперссылками: https://community.alexgyver.ru/threads/wifi-lampa-budilnik-obsuzhdenie-proshivki-ot-gunner47.2418/post-30883
   - Исправлен баг в условии процедуры вызова эффектов (у двух эффектов регулятор скорость не работал)
   - Инвертирована регулировка Скорости у всех эффектов, где она работала задом наперёд
   - Из всех эффектов убраны обращения к их порядковым номерам. Теперь любой эффект можно устанавливать на любое место (кроме номеров с 7 по 15), а также делать копии эффектов
+  - В библиотеке FastLED исправлены коэффициенты расчёта потребления тока
   - Переработано распределение флеш-памяти EepromManager.h Теперь можно добавлять новые эффекты и делать копии (копии - для демонстрации одного эффекта на разных настройках).
   - Эффект Огонь заменён на "Ламповый огонь", при максимальном Масштабе он же будет эффект Белый огонь
   - Эффект Белый огонь заменён на эффект Водопад, при максимальном Масштабе цвет воды будет белым
-  - Внесены исправления эффекта Пейнтбол от @Palpalych (выставляйте Скорость побольше, чтобы выглядело хорошо)
+  - Внесены исправления эффектов Радуга диагональная и Пейнтбол от @Palpalych (выставляйте Скорость побольше, чтобы выглядело хорошо)
   - К эффекту Цвет добавлен эффект Бассейн (при максимальной Скорости блики воды исчезают, работает эффект Цвет)
   - К эффекту Смена цвета добавлен эффект Пульс (при минимальном Масштабе будет работать эффект Смена цвета)
   - Внесены исправления эффектов Метель и Звездопад от @Rampart
@@ -252,11 +259,13 @@ uint8_t FavoritesManager::FavoritesRunning = 0;
 uint16_t FavoritesManager::Interval = DEFAULT_FAVORITES_INTERVAL;
 uint16_t FavoritesManager::Dispersion = DEFAULT_FAVORITES_DISPERSION;
 uint8_t FavoritesManager::UseSavedFavoritesRunning = 0;
-uint8_t FavoritesManager::FavoriteModes[MODE_AMOUNT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t FavoritesManager::FavoriteModes[MODE_AMOUNT] = {0};
 uint32_t FavoritesManager::nextModeAt = 0UL;
 
 bool CaptivePortalManager::captivePortalCalled = false;
 
+char* TextTicker;
+int Painting = 0; CRGB DriwingColor = CRGB(255, 255, 255);
 
 void setup()
 {
@@ -459,12 +468,17 @@ void setup()
   randomSeed(micros());
   changePower();
   loadingFlag = true;
+
+  TextTicker = "TESTING TEXT";
+  modes[EFF_TEXT].Brightness = 50;
+  modes[EFF_TEXT].Speed = 99;
 }
 
 
 void loop()
 {
   parseUDP();
+  if (Painting == 0) {
   effectsTick();
 
   EepromManager::HandleEepromTick(&settChanged, &eepromTimeout, &ONflag, 
@@ -523,6 +537,6 @@ void loop()
   #if defined(GENERAL_DEBUG) && GENERAL_DEBUG_TELNET
   handleTelnetClient();
   #endif
-
+  }
   ESP.wdtFeed();                                            // пнуть собаку
 }

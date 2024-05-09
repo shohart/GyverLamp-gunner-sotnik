@@ -5,7 +5,7 @@
 #define MIRR_V                (0U)                          // отразить текст по вертикали (0 / 1)
 #define MIRR_H                (0U)                          // отразить текст по горизонтали (0 / 1)
 
-#define TEXT_HEIGHT           (0U)                          // высота, на которой бежит текст (от низа матрицы)
+#define TEXT_HEIGHT           (2U)                          // высота, на которой бежит текст (от низа матрицы)
 #define LET_WIDTH             (5U)                          // ширина буквы шрифта
 #define LET_HEIGHT            (8U)                          // высота буквы шрифта
 #define SPACE                 (1U)                          // пробел
@@ -17,21 +17,17 @@
 int16_t offset = WIDTH;
 uint32_t scrollTimer = 0LL;
 
-
-bool fillString(const char* text, CRGB letterColor)
+boolean fillString(const char* text, CRGB letterColor, boolean itsText)
 {
-  if (!text || !strlen(text))
-  {
-    return true;
-  }
-
-  if (loadingFlag)
-  {
+  //CRGB letterColor = CHSV(modes[EFF_TEXT].Scale * 2.5 * 2.5, 255U, 255U);
+//Serial.println(text);
+  if (!text || !strlen(text)) { return true; }
+  if (loadingFlag && !itsText) {
     offset = WIDTH;                                         // перемотка в правый край
     loadingFlag = false;
   }
 
-  if (millis() - scrollTimer >= 100)
+  if (millis() - scrollTimer >= modes[EFF_TEXT].Speed)
   {
     scrollTimer = millis();
     FastLED.clear();
@@ -142,7 +138,7 @@ void printTime(uint32_t thisTime, bool onDemand, bool ONflag) // периоди�
     digitalWrite(MOSFET_PIN, MOSFET_LEVEL);
     #endif
 
-    while (!fillString(stringTime, letterColor)) { delay(1); ESP.wdtFeed(); }
+    while (!fillString(stringTime, letterColor, false)) { delay(1); ESP.wdtFeed(); }
 
     #if defined(MOSFET_PIN) && defined(MOSFET_LEVEL)        // установка сигнала в пин, управляющий MOSFET транзистором, соответственно состоянию вкл/выкл матрицы или будильника
     digitalWrite(MOSFET_PIN, ONflag || (dawnFlag && !manualOff) ? MOSFET_LEVEL : !MOSFET_LEVEL);
@@ -196,6 +192,7 @@ uint8_t getBrightnessForPrintTime(uint32_t thisTime, bool ONflag)     // опр�
 
 void drawLetter(uint8_t letter, int8_t offset, CRGB letterColor)
 {
+ 
   uint8_t start_pos = 0, finish_pos = LET_WIDTH;
 
   if (offset < (int8_t)-LET_WIDTH || offset > (int8_t)WIDTH)
@@ -210,7 +207,6 @@ void drawLetter(uint8_t letter, int8_t offset, CRGB letterColor)
   {
     finish_pos = (uint8_t)(WIDTH - offset);
   }
-
   for (uint8_t i = start_pos; i < finish_pos; i++)
   {
     uint8_t thisByte;

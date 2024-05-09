@@ -44,6 +44,7 @@ void parseUDP()
 void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutput)
 {
     char buff[MAX_UDP_BUFFER_SIZE], *endToken = NULL;
+    String BUFF = String(inputBuffer);
 
     if (!strncmp_P(inputBuffer, PSTR("DEB"), 3))
     {
@@ -331,27 +332,57 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
          {
            case 1U:
            {
-             char replyPacket[600U];
-             efList_1.toCharArray(replyPacket, 600U);
-             Udp.write(replyPacket);
+             Udp.write(efList_1.c_str());
+             Udp.write("\0");
              break;
            }
            case 2U:
            {
-             char replyPacket[600U];
-             efList_2.toCharArray(replyPacket, 600U);
-             Udp.write(replyPacket);
+             Udp.write(efList_2.c_str());
+             Udp.write("\0");
              break;
            }
            case 3U:
            {
-             char replyPacket[600U];
-             efList_3.toCharArray(replyPacket, 600U);
-             Udp.write(replyPacket);
+             Udp.write(efList_3.c_str());
+             Udp.write("\0");
              break;
            }
          }
-    }    
+    }   
+    else if (!strncmp_P(inputBuffer, PSTR("TXT"), 3)) {     // Принимаем текст для бегущей строки
+      String str = getValue(BUFF, '-', 1);
+      int str_len = str.length() + 1;
+      str.toCharArray(TextTicker, str_len);
+    }
+    else if (!strncmp_P(inputBuffer, PSTR("DRW"), 3)) {
+      String xx = getValue(BUFF, ';', 1);
+      String yy = getValue(BUFF, ';', 2);
+      int8_t X = (int8_t)xx.toInt();
+      int8_t Y = (int8_t)yy.toInt();
+      drawPixelXY(X, Y, DriwingColor);
+      FastLED.show();
+    }
+    else if (!strncmp_P(inputBuffer, PSTR("CLR"), 3)) {
+      FastLED.clear();
+      FastLED.show();
+    }
+    else if (!strncmp_P(inputBuffer, PSTR("COL"), 3)) {
+      String R = getValue(BUFF, ';', 1);
+      String G = getValue(BUFF, ';', 2);
+      String B = getValue(BUFF, ';', 3);
+      DriwingColor = CRGB(R.toInt(), B.toInt(), G.toInt());
+    }
+    else if (!strncmp_P(inputBuffer, PSTR("DRAWOFF"), 7)) {
+      Painting = 0;
+      FastLED.clear();
+      FastLED.show();
+    }
+    else if (!strncmp_P(inputBuffer, PSTR("DRAWON"), 6)) {
+      Painting = 1;
+      FastLED.clear();
+      FastLED.show();
+    } 
     else
     {
       inputBuffer[0] = '\0';
@@ -421,4 +452,19 @@ void sendTimer(char *outputBuffer)
     TimerManager::TimerRunning,
     TimerManager::TimerOption,
    (TimerManager::TimerRunning ? (uint16_t)floor((TimerManager::TimeToFire - millis()) / 1000) : 0));
+}
+
+String getValue(String data, char separator, int index)
+{
+  int found = 0;
+  int strIndex[] = { 0, -1 };
+  int maxIndex = data.length() - 1;
+  for (int i = 0; i <= maxIndex && found <= index; i++) {
+    if (data.charAt(i) == separator || i == maxIndex) {
+      found++;
+      strIndex[0] = strIndex[1] + 1;
+      strIndex[1] = (i == maxIndex) ? i + 1 : i;
+    }
+  }
+  return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
