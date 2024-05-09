@@ -263,6 +263,7 @@ boolean  WiFiManager::startConfigPortal(char const *apName, char const *apPasswo
       }
     }
     yield();
+    delay(1); // trying to fix disconnections
   }
 
   server.reset();
