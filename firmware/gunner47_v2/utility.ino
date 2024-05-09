@@ -74,6 +74,8 @@ uint32_t getPixColorXY(uint8_t x, uint8_t y)
 #define THIS_Y (WIDTH - x - 1)
 
 #else
+!!!!!!!!!!!!!!!!!!!!!!!!!!!   смотрите инструкцию: https://alexgyver.ru/wp-content/uploads/2018/11/scheme3.jpg
+!!!!!!!!!!!!!!!!!!!!!!!!!!!   такого сочетания CONNECTION_ANGLE и STRIP_DIRECTION не бывает
 #define _WIDTH WIDTH
 #define THIS_X x
 #define THIS_Y y
@@ -153,18 +155,18 @@ uint16_t getPixelNumber(uint8_t x, uint8_t y)
 // восстановление настроек эффектов на настройки по умолчанию
 void restoreSettings()
 {
-  if (defaultSettingsCOUNT == MODE_AMOUNT)          // если пользователь не накосячил с количеством строк в массиве настроек в Constants.h, используем их
+//  if (defaultSettingsCOUNT == MODE_AMOUNT)          // если пользователь не накосячил с количеством строк в массиве настроек в Constants.h, используем их
     for (uint8_t i = 0; i < MODE_AMOUNT; i++) {
       modes[i].Brightness = pgm_read_byte(&defaultSettings[i][0]);
       modes[i].Speed      = pgm_read_byte(&defaultSettings[i][1]);
       modes[i].Scale      = pgm_read_byte(&defaultSettings[i][2]);
     }
-  else                                              // иначе берём какие-то абстрактные
-    for (uint8_t i = 0; i < MODE_AMOUNT; i++) {
-      modes[i].Brightness = 50U;
-      modes[i].Speed      = 225U;
-      modes[i].Scale      = 40U;
-    }  
+//  else                                              // иначе берём какие-то абстрактные
+//    for (uint8_t i = 0; i < MODE_AMOUNT; i++) {
+//      modes[i].Brightness = 50U;
+//      modes[i].Speed      = 225U;
+//      modes[i].Scale      = 40U;
+//    }  
 }
 
 // неточный, зато более быстрый квадратный корень
