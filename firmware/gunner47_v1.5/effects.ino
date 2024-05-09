@@ -4473,6 +4473,7 @@ void DrawLineF(float x1, float y1, float x2, float y2, CRGB color){
   }
 }
 
+//https://gist.github.com/sutaburosu/32a203c2efa2bb584f4b846a91066583
 void drawPixelXYF(float x, float y, CRGB color)
 {
   // extract the fractional parts and derive their inverses
@@ -4497,10 +4498,14 @@ void drawCircleF(float x0, float y0, float radius, CRGB color){
   float delta = 1 - 2 * radius;
 
   while (y >= 0) {
-    drawPixelXYF(x0 + x, y0 + y, color);
-    drawPixelXYF(x0 + x, y0 - y, color);
-    drawPixelXYF(x0 - x, y0 + y, color);
-    drawPixelXYF(x0 - x, y0 - y, color);
+//    drawPixelXYF(x0 + x, y0 + y, color);
+//    drawPixelXYF(x0 + x, y0 - y, color);
+//    drawPixelXYF(x0 - x, y0 + y, color);
+//    drawPixelXYF(x0 - x, y0 - y, color);
+    drawPixelXYF(fmod(x0 + x +WIDTH,WIDTH), y0 + y, color); // сделал, чтобы круги были бесшовными по оси х
+    drawPixelXYF(fmod(x0 + x +WIDTH,WIDTH), y0 - y, color);
+    drawPixelXYF(fmod(x0 - x +WIDTH,WIDTH), y0 + y, color);
+    drawPixelXYF(fmod(x0 - x +WIDTH,WIDTH), y0 - y, color);
     error = 2 * (delta + y) - 1;
     if (delta < 0 && error <= 0) {
       ++x;
@@ -4762,5 +4767,104 @@ void LeapersRoutine(){
     drawPixelXYF(leaperX[i], leaperY[i], ColorFromPalette(*curPalette, bballsCOLOR[i]));
   };
 
+  blurScreen(20);
+}
+
+// ------------------------------ ЭФФЕКТ ЛАВОВАЯ ЛАМПА ----------------------
+// (c) SottNick
+
+//float leaperX[bballsMaxNUM]; // координата по Х
+//float leaperY[bballsMaxNUM]; // координата по Y
+//float bballsVImpact[bballsMaxNUM];                   // скорость движения пузыря
+//float bballsCOR[bballsMaxNUM];                       // радиус пузыря ... мог бы быть, если бы круги рисовались нормально
+
+void LavaLampGetspeed(uint8_t l) {
+  //bballsVImpact[l] = (float)random8(1, 11) / 10.0; // скорость пузырей 10 градаций?
+  bballsVImpact[l] = (float)random8(5, 11) / (257U - modes[currentMode].Speed) / 4.0; // если скорость кадров фиксированная
+}
+void drawBlob(uint8_t l, CRGB color) { //раз круги нарисовать не получается, будем попиксельно вырисовывать 2 варианта пузырей
+  if (bballsCOR[l] == 2)
+    {
+      for (int8_t x = -2; x < 3; x++)
+        for (int8_t y = -2; y < 3; y++)
+          if (abs(x)+abs(y) < 4)
+            drawPixelXYF(fmod(leaperX[l]+x +WIDTH,WIDTH), leaperY[l]+y, color);
+    }
+  else
+    {
+      for (int8_t x = -1; x < 3; x++)
+        for (int8_t y = -1; y < 3; y++)
+          if (!(x==-1 && (y==-1 || y==2) || x==2 && (y==-1 || y==2)))
+            drawPixelXYF(fmod(leaperX[l]+x +WIDTH,WIDTH), leaperY[l]+y, color);
+    }
+}
+
+void LavaLampRoutine(){
+  //unsigned num = map(scale, 0U, 255U, 6U, sizeof(boids) / sizeof(*boids));
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    //bballsNUM = (modes[currentMode].Scale - 1U) / 99.0 * (bballsMaxNUM - 1U) + 1U;
+    //bballsNUM = (modes[currentMode].Scale - 1U) % 11U / 10.0 * (bballsMaxNUM - 1U) + 1U;
+    bballsNUM = (WIDTH / 2) -  ((WIDTH - 1) & 0x01);
+    //if (bballsNUM > bballsMaxNUM)
+    //  bballsNUM = bballsMaxNUM;
+    //if (bballsNUM < 2U) bballsNUM = 2U;
+
+    uint8_t shift = random8(2);
+    for (uint8_t i = 0; i < WIDTH / 2; i++) {
+      //LavaLampRestart_leaper(i);
+      leaperY[i] = 0;//random8(HEIGHT);
+      leaperX[i] = i * 2U + shift;
+      LavaLampGetspeed(i);
+      //bballsCOR[i] = 1.0 + 0.2 * random8(8); // присваивается случайный радиус пузырям от 1 до 2,5
+      bballsCOR[i] = random8(1,3); // присваивается случайный радиус пузырям от 1 до 2
+    }
+    if (modes[currentMode].Scale != 1U)
+      hue = modes[currentMode].Scale * 2.57;
+  }
+  if (modes[currentMode].Scale == 1U)
+    {
+      hue2++;
+      if (hue2 % 10 == 0U)
+        hue++;
+    }
+  CRGB color = CHSV(hue, (modes[currentMode].Scale < 100U) ? 255U : 0U, 255U);
+  //CRGB halfcolor = CHSV(hue, 255U, 1275U);
+ 
+  FastLED.clear();
+
+  for (uint8_t i = 0; i < bballsNUM; i++) {
+    //LavaLampMove_leaper(i);
+    if (leaperY[i] + bballsCOR[i] >= HEIGHT - 1)
+       leaperY[i] += (bballsVImpact[i] * ((HEIGHT - 1 - leaperY[i]) / bballsCOR[i] + 0.02));
+    else if (leaperY[i] - bballsCOR[i] <= 0)
+       leaperY[i] += (bballsVImpact[i] * (leaperY[i] / bballsCOR[i] + 0.02));
+    else
+       leaperY[i] += bballsVImpact[i];
+
+    // bounce off the floor and ceiling?
+    if (leaperY[i] < 0){
+      //bballsVImpact[i] = -bballsVImpact[i];
+      LavaLampGetspeed(i);
+      //bballsCOR[i] = 1+2*bballsVImpact[i];
+      leaperY[i] = 0;
+      }
+    else if (leaperY[i] > HEIGHT - 1){
+      LavaLampGetspeed(i);
+      //bballsCOR[i] = 1+2*bballsVImpact[i];
+      bballsVImpact[i] = -bballsVImpact[i];
+      leaperY[i] = HEIGHT - 1;
+      }
+  
+/*    
+    for (uint8_t r = 1; r < bballsCOR[i]; r++)
+      drawCircleF(leaperX[i], leaperY[i], r, color); // как-то хренова рисуются круги
+    drawCircleF(leaperX[i], leaperY[i], bballsCOR[i], color); // как-то хренова рисуются круги
+    drawPixelXYF(leaperX[i], leaperY[i], color); // центральная точка
+*/
+    drawBlob(i, color);
+  };
+  
   blurScreen(20);
 }
