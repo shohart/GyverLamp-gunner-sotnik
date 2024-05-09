@@ -138,7 +138,7 @@ void buttonTick()
 
 
   // семикратное нажатие
-  if (ONflag && clickCount == 7U)                           // смена рабочего режима лампы: с WiFi точки доступа на WiFi клиент или наоборот
+  if (clickCount == 7U)  // if (ONflag &&                   // смена рабочего режима лампы: с WiFi точки доступа на WiFi клиент или наоборот
   {
     espMode = (espMode == 0U) ? 1U : 0U;
     EepromManager::SaveEspMode(&espMode);

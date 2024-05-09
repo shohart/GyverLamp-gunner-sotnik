@@ -190,40 +190,39 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       #endif
     }
 
-    else if (!strncmp_P(inputBuffer, PSTR("ALM_SET"), 7))
-    {
-      uint8_t alarmNum = (char)inputBuffer[7] - '0';
-      alarmNum -= 1;
-      if (strstr_P(inputBuffer, PSTR("ON")) - inputBuffer == 9)
+    else if (!strncmp_P(inputBuffer, PSTR("ALM_"), 4)) { // сокращаем GET и SET для ускорения регулярного цикла
+      if (!strncmp_P(inputBuffer, PSTR("ALM_SET"), 7))
       {
-        alarms[alarmNum].State = true;
-        sendAlarms(inputBuffer);
-      }
-      else if (strstr_P(inputBuffer, PSTR("OFF")) - inputBuffer == 9)
-      {
-        alarms[alarmNum].State = false;
-        sendAlarms(inputBuffer);
+        uint8_t alarmNum = (char)inputBuffer[7] - '0';
+        alarmNum -= 1;
+        if (strstr_P(inputBuffer, PSTR("ON")) - inputBuffer == 9)
+        {
+          alarms[alarmNum].State = true;
+          sendAlarms(inputBuffer);
+        }
+        else if (strstr_P(inputBuffer, PSTR("OFF")) - inputBuffer == 9)
+        {
+          alarms[alarmNum].State = false;
+          sendAlarms(inputBuffer);
+        }
+        else
+        {
+          memcpy(buff, &inputBuffer[8], strlen(inputBuffer)); // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 9
+          alarms[alarmNum].Time = atoi(buff);
+          sendAlarms(inputBuffer);
+        }
+        EepromManager::SaveAlarmsSettings(&alarmNum, alarms);
+
+        #if (USE_MQTT)
+        if (espMode == 1U)
+        {
+          strcpy(MqttManager::mqttBuffer, inputBuffer);
+          MqttManager::needToPublish = true;
+        }
+        #endif
       }
       else
-      {
-        memcpy(buff, &inputBuffer[8], strlen(inputBuffer)); // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 9
-        alarms[alarmNum].Time = atoi(buff);
         sendAlarms(inputBuffer);
-      }
-      EepromManager::SaveAlarmsSettings(&alarmNum, alarms);
-
-      #if (USE_MQTT)
-      if (espMode == 1U)
-      {
-        strcpy(MqttManager::mqttBuffer, inputBuffer);
-        MqttManager::needToPublish = true;
-      }
-      #endif
-    }
-
-    else if (!strncmp_P(inputBuffer, PSTR("ALM_GET"), 7))
-    {
-      sendAlarms(inputBuffer);
     }
 
     else if (!strncmp_P(inputBuffer, PSTR("DAWN"), 4))
@@ -254,80 +253,73 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       }
     }
 
-    else if (!strncmp_P(inputBuffer, PSTR("TMR_GET"), 7))
-    {
-      sendTimer(inputBuffer);
-    }
-
-    else if (!strncmp_P(inputBuffer, PSTR("TMR_SET"), 7))
-    {
-      memcpy(buff, &inputBuffer[8], 2);                     // взять подстроку, состоящую из 9 и 10 символов, из строки inputBuffer
-      TimerManager::TimerRunning = (bool)atoi(buff);
-
-      memcpy(buff, &inputBuffer[10], 2);                    // взять подстроку, состоящую из 11 и 12 символов, из строки inputBuffer
-      TimerManager::TimerOption = (uint8_t)atoi(buff);
-
-      memcpy(buff, &inputBuffer[12], strlen(inputBuffer));  // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 13
-      TimerManager::TimeToFire = millis() + strtoull(buff, &endToken, 10) * 1000;
-
-      TimerManager::TimerHasFired = false;
-      sendTimer(inputBuffer);
-
-      #if (USE_MQTT)
-      if (espMode == 1U)
+    else if (!strncmp_P(inputBuffer, PSTR("TMR_"), 4)) { // сокращаем GET и SET для ускорения регулярного цикла
+      if (!strncmp_P(inputBuffer, PSTR("TMR_SET"), 7))
       {
-        MqttManager::needToPublish = true;
+        memcpy(buff, &inputBuffer[8], 2);                     // взять подстроку, состоящую из 9 и 10 символов, из строки inputBuffer
+        TimerManager::TimerRunning = (bool)atoi(buff);
+
+        memcpy(buff, &inputBuffer[10], 2);                    // взять подстроку, состоящую из 11 и 12 символов, из строки inputBuffer
+        TimerManager::TimerOption = (uint8_t)atoi(buff);
+
+        memcpy(buff, &inputBuffer[12], strlen(inputBuffer));  // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 13
+        TimerManager::TimeToFire = millis() + strtoull(buff, &endToken, 10) * 1000;
+
+        TimerManager::TimerHasFired = false;
+        sendTimer(inputBuffer);
+
+        #if (USE_MQTT)
+        if (espMode == 1U)
+        {
+          MqttManager::needToPublish = true;
+        }
+        #endif
       }
-      #endif
+      else
+        sendTimer(inputBuffer);
     }
 
-    else if (!strncmp_P(inputBuffer, PSTR("FAV_GET"), 7))
-    {
-      FavoritesManager::SetStatus(inputBuffer);
-    }
-
-    else if (!strncmp_P(inputBuffer, PSTR("FAV_SET"), 7))
-    {
-      FavoritesManager::ConfigureFavorites(inputBuffer);
-      FavoritesManager::SetStatus(inputBuffer);
-      settChanged = true;
-      eepromTimeout = millis();
-
-      #if (USE_MQTT)
-      if (espMode == 1U)
+    else if (!strncmp_P(inputBuffer, PSTR("FAV_"), 4)) { // сокращаем GET и SET для ускорения регулярного цикла
+      if (!strncmp_P(inputBuffer, PSTR("FAV_SET"), 7))
       {
-        MqttManager::needToPublish = true;
+        FavoritesManager::ConfigureFavorites(inputBuffer);
+        FavoritesManager::SetStatus(inputBuffer);
+        settChanged = true;
+        eepromTimeout = millis();
+
+        #if (USE_MQTT)
+        if (espMode == 1U)
+        {
+          MqttManager::needToPublish = true;
+        }
+        #endif
       }
-      #endif
+      else
+        FavoritesManager::SetStatus(inputBuffer);
     }
 
+    #ifdef OTA
     else if (!strncmp_P(inputBuffer, PSTR("OTA"), 3))
     {
-      #ifdef OTA
-      otaManager.RequestOtaUpdate();
-      FastLED.delay(70);
-      //if (otaManager.RequestOtaUpdate()) по идее, нужен положительный ответ от менеджера, но он не поступает с первого раза...
-      otaManager.RequestOtaUpdate();
-      //{
-        currentMode = EFF_MATRIX;                             // принудительное включение режима "Матрица" для индикации перехода в режим обновления по воздуху
-        FastLED.clear();
-        FastLED.delay(1);
-        ONflag = true;
-        changePower();
-      //}
-      #ifdef EFF_TEXT_BLABLABLA // не доделал сообщение об ошибке
-      else
-      {
-        TextTicker = "ESP_MODE=" + String(espMode);
-        currentMode = EFF_TEXT;                             // принудительное включение режима "Бегущая строка" для сообщения об ошибке
-        FastLED.clear();
-        FastLED.delay(1);
-        ONflag = true;
-        changePower();
+      if (espMode == 1U){// && otaManager.RequestOtaUpdate()){ по идее, нужен положительный ответ от менеджера
+        otaManager.RequestOtaUpdate(); // но из-за двойного запроса нихрена не работает
+        FastLED.delay(70);
+        //if (otaManager.RequestOtaUpdate()) //по идее, нужен положительный ответ от менеджера
+        otaManager.RequestOtaUpdate(); // но если уже был один ответ из двух в прошлый раз, то сейчас второй лучше не проверять
+        if (OtaManager::OtaFlag == OtaPhase::InProgress) {
+          currentMode = EFF_MATRIX;                             // принудительное включение режима "Матрица" для индикации перехода в режим обновления по воздуху
+          FastLED.clear();
+          FastLED.delay(1);
+          ONflag = true;
+          changePower();
+        }
+        else
+          showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
       }
-      #endif // EFF_TEXT
-      #endif // OTA
+      else
+        showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
     }
+    #endif // OTA
 
     else if (!strncmp_P(inputBuffer, PSTR("BTN"), 3))
     {
@@ -404,19 +396,22 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
          }
     }
     else if (!strncmp_P(inputBuffer, PSTR("TXT"), 3)){     // Принимаем текст для бегущей строки
-      #ifdef USE_MANUAL_TIME_SETTING // вкорячиваем ручную синхранизацию времени пока что сюда. пока нет другой функции в приложении...
+      #if defined(USE_SECRET_COMMANDS) || defined(USE_MANUAL_TIME_SETTING) // вкорячиваем ручную синхранизацию времени пока что сюда. пока нет другой функции в приложении...
         if (!strncmp_P(inputBuffer, PSTR("TXT-time="), 9) && (BUFF.length() > 15)){ 
-          // 0000000000111111
-          // 0123456789012345
-          // TXT-time=07:25 7
-          uint8_t mtH = BUFF.substring(9, 11).toInt();
-          uint8_t mtM = BUFF.substring(12, 14).toInt();
-          uint8_t mtD = BUFF.substring(15, 16).toInt();
-          if (mtH < 24U && mtM < 60U && mtD < 8U && mtD > 0U){
-            manualTimeShift = (((3650UL + mtD) * 24UL + mtH) * 60UL + mtM) * 60UL - millis() / 1000UL; // 3650 дней (521 полная неделя + 3 дня для сдвига на понедельник???)
-            timeSynched = true;
-            showWarning(CRGB::Blue, 2000U, 500U);     // мигание голубым цветом 2 секунды (2 раза) - время установлено
-          }
+          #ifdef USE_MANUAL_TIME_SETTING // всё-таки если данная директива не объявлена, то нет смысла высчитывать ручное время. использовать его всё равно не будет никто
+            // 0000000000111111
+            // 0123456789012345
+            // TXT-time=07:25 7
+            uint8_t mtH = BUFF.substring(9, 11).toInt();
+            uint8_t mtM = BUFF.substring(12, 14).toInt();
+            uint8_t mtD = BUFF.substring(15, 16).toInt();
+            if (mtH < 24U && mtM < 60U && mtD < 8U && mtD > 0U){
+              manualTimeShift = (((3650UL + mtD) * 24UL + mtH) * 60UL + mtM) * 60UL - millis() / 1000UL; // 3650 дней (521 полная неделя + 3 дня для сдвига на понедельник???)
+              timeSynched = true;
+              showWarning(CRGB::Blue, 2000U, 500U);     // мигание голубым цветом 2 секунды (2 раза) - время установлено
+            }
+            else
+              showWarning(CRGB::Red, 2000U, 500U);      // мигание красным цветом 2 секунды (ошибка)
 /*    Я БЕЗ ПОНЯТИЯ, ПОЧЕМУ ТЕКСТ В БЕГУЩЕЙ СТРОКЕ С КАЖДЫМ РАЗОМ СДВИГАЕТСЯ ВСЁ СИЛЬНЕЕ
             mtD = weekday(millis() / 1000UL + manualTimeShift);
             mtD = (mtD == 7) ? 1 : mtD + 1;
@@ -433,7 +428,47 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         ONflag = true;
         changePower();
 */        
+          #endif // USE_MANUAL_TIME_SETTING
         }
+        #ifdef USE_SECRET_COMMANDS
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-esp_mode=0"), 14)){
+            if (espMode == 1U){
+              espMode = 0U;
+              EepromManager::SaveEspMode(&espMode);
+              showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды - смена рабочего режима лампы, перезагрузка
+              ESP.restart();
+            }
+            else
+              showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
+          }
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-esp_mode=1"), 14)){
+            if (espMode == 0U){
+              espMode = 1U;
+              EepromManager::SaveEspMode(&espMode);
+              showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды - смена рабочего режима лампы, перезагрузка
+              ESP.restart();
+            }
+            else
+              showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
+          }
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-reset=wifi"), 14)){
+            wifiManager.resetSettings();                             // сброс сохранённых SSID и пароля (сброс настроек подключения к роутеру)
+            showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды - смена рабочего режима лампы, перезагрузка
+          }
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-reset=effects"), 17)){
+            restoreSettings();
+            loadingFlag = true;
+            settChanged = true;
+            eepromTimeout = millis();
+            #if (USE_MQTT)
+            if (espMode == 1U)
+            {
+              MqttManager::needToPublish = true;
+            }
+            #endif
+            showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды - смена рабочего режима лампы, перезагрузка
+          }
+        #endif // USE_SECRET_COMMANDS
         else
         {  
           //String str = getValue(BUFF, '-', 1); // этим способом дефисы нельзя в бегущую строку передать. почему вообще разделитель - дефис?!
@@ -444,7 +479,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         //String str = getValue(BUFF, '-', 1); // этим способом дефисы нельзя в бегущую строку передать. почему вообще разделитель - дефис?!
         String str = (BUFF.length() > 4) ? BUFF.substring(4, BUFF.length()) : "";
         str.toCharArray(TextTicker, str.length() + 1);
-      #endif
+      #endif // defined(USE_SECRET_COMMANDS) || defined(USE_MANUAL_TIME_SETTING)
     }
     else if (!strncmp_P(inputBuffer, PSTR("DRW"), 3)) {
       drawPixelXY((int8_t)getValue(BUFF, ';', 1).toInt(), (int8_t)getValue(BUFF, ';', 2).toInt(), DriwingColor);
@@ -461,16 +496,14 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
        DriwingColor = CRGB(getValue(BUFF, ';', 1).toInt(), getValue(BUFF, ';', 2).toInt(), getValue(BUFF, ';', 3).toInt());
       #endif
     }
-    else if (!strncmp_P(inputBuffer, PSTR("DRAWOFF"), 7)) {
-      Painting = 0;
+    else if (!strncmp_P(inputBuffer, PSTR("DRAWO"), 5)) { // сокращаем OFF и ON для ускорения регулярного цикла
+      if (!strncmp_P(inputBuffer, PSTR("DRAWON"), 6))
+       Painting = 1;
+      else
+       Painting = 0;
       FastLED.clear();
       FastLED.show();
     }
-    else if (!strncmp_P(inputBuffer, PSTR("DRAWON"), 6)) {
-      Painting = 1;
-      FastLED.clear();
-      FastLED.show();
-    } 
 #ifndef USE_OLD_APP_FROM_KOTEYKA
     else if (!strncmp_P(inputBuffer, PSTR("RESET"), 5)) { // сброс настроек WIFI по запросу от приложения
       wifiManager.resetSettings();

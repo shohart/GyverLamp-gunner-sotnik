@@ -114,3 +114,17 @@ void restoreSettings()
       modes[i].Scale      = 40U;
     }  
 }
+
+// неточный, зато более быстрый квадратный корень
+float sqrt3(const float x)
+{
+  union
+  {
+    int i;
+    float x;
+  } u;
+
+  u.x = x;
+  u.i = (1<<29) + (u.i >> 1) - (1<<22);
+  return u.x;
+}
