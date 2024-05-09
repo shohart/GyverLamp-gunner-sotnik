@@ -39,8 +39,8 @@ void madnessNoiseRoutine()
   if (loadingFlag)
   {
     loadingFlag = false;
-    scale = modes[EFF_MADNESS].Scale;
-    speed = modes[EFF_MADNESS].Speed;
+    scale = modes[currentMode].Scale;
+    speed = modes[currentMode].Speed;
   }
   fillnoise8();
   for (uint8_t i = 0; i < WIDTH; i++)
@@ -60,8 +60,8 @@ void rainbowNoiseRoutine()
   {
     loadingFlag = false;
     currentPalette = RainbowColors_p;
-    scale = modes[EFF_RAINBOW].Scale;
-    speed = modes[EFF_RAINBOW].Speed;
+    scale = modes[currentMode].Scale;
+    speed = modes[currentMode].Speed;
     colorLoop = 1;
   }
   fillNoiseLED();
@@ -73,8 +73,8 @@ void rainbowStripeNoiseRoutine()
   {
     loadingFlag = false;
     currentPalette = RainbowStripeColors_p;
-    scale = modes[EFF_RAINBOW_STRIPE].Scale;
-    speed = modes[EFF_RAINBOW_STRIPE].Speed;
+    scale = modes[currentMode].Scale;
+    speed = modes[currentMode].Speed;
     colorLoop = 1;
   }
   fillNoiseLED();
@@ -92,8 +92,8 @@ void zebraNoiseRoutine()
     currentPalette[4] = CRGB::White;
     currentPalette[8] = CRGB::White;
     currentPalette[12] = CRGB::White;
-    scale = modes[EFF_ZEBRA].Scale;
-    speed = modes[EFF_ZEBRA].Speed;
+    scale = modes[currentMode].Scale;
+    speed = modes[currentMode].Speed;
     colorLoop = 1;
   }
   fillNoiseLED();
@@ -105,8 +105,8 @@ void forestNoiseRoutine()
   {
     loadingFlag = false;
     currentPalette = ForestColors_p;
-    scale = modes[EFF_FOREST].Scale;
-    speed = modes[EFF_FOREST].Speed;
+    scale = modes[currentMode].Scale;
+    speed = modes[currentMode].Speed;
     colorLoop = 0;
   }
   fillNoiseLED();
@@ -118,8 +118,8 @@ void oceanNoiseRoutine()
   {
     loadingFlag = false;
     currentPalette = OceanColors_p;
-    scale = modes[EFF_OCEAN].Scale;
-    speed = modes[EFF_OCEAN].Speed;
+    scale = modes[currentMode].Scale;
+    speed = modes[currentMode].Speed;
     colorLoop = 0;
   }
 
@@ -132,8 +132,8 @@ void plasmaNoiseRoutine()
   {
     loadingFlag = false;
     currentPalette = PartyColors_p;
-    scale = modes[EFF_PLASMA].Scale;
-    speed = modes[EFF_PLASMA].Speed;
+    scale = modes[currentMode].Scale;
+    speed = modes[currentMode].Speed;
     colorLoop = 1;
   }
   fillNoiseLED();
@@ -145,8 +145,8 @@ void cloudsNoiseRoutine()
   {
     loadingFlag = false;
     currentPalette = CloudColors_p;
-    scale = modes[EFF_CLOUDS].Scale;
-    speed = modes[EFF_CLOUDS].Speed;
+    scale = modes[currentMode].Scale;
+    speed = modes[currentMode].Speed;
     colorLoop = 0;
   }
   fillNoiseLED();
@@ -158,8 +158,8 @@ void lavaNoiseRoutine()
   {
     loadingFlag = false;
     currentPalette = LavaColors_p;
-    scale = modes[EFF_LAVA].Scale;
-    speed = modes[EFF_LAVA].Speed;
+    scale = modes[currentMode].Scale;
+    speed = modes[currentMode].Speed;
     colorLoop = 0;
   }
   fillNoiseLED();

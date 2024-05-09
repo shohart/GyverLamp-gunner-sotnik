@@ -314,7 +314,44 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       }
       #endif
     }
-
+    else if (!strncmp_P(inputBuffer, PSTR("GBR"), 3)) // выставляем общую яркость для всех эффектов без сохранения в EEPROM, если приложение присылает такую строку
+    {
+      memcpy(buff, &inputBuffer[3], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 4
+      uint8_t ALLbri = constrain(atoi(buff), 1, 255);
+      for (uint8_t i = 0; i < MODE_AMOUNT; i++) {
+        modes[i].Brightness = ALLbri;
+      }
+      FastLED.setBrightness(ALLbri);
+      loadingFlag = true;
+    }    
+    else if (!strncmp_P(inputBuffer, PSTR("LIST"), 4)) // передача списка эффектов по запросу от приложения (если поддерживается приложением)
+    {
+       memcpy(buff, &inputBuffer[4], strlen(inputBuffer));  // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 5
+       switch (atoi(buff))
+         {
+           case 1U:
+           {
+             char replyPacket[600U];
+             efList_1.toCharArray(replyPacket, 600U);
+             Udp.write(replyPacket);
+             break;
+           }
+           case 2U:
+           {
+             char replyPacket[600U];
+             efList_2.toCharArray(replyPacket, 600U);
+             Udp.write(replyPacket);
+             break;
+           }
+           case 3U:
+           {
+             char replyPacket[600U];
+             efList_3.toCharArray(replyPacket, 600U);
+             Udp.write(replyPacket);
+             break;
+           }
+         }
+    }    
     else
     {
       inputBuffer[0] = '\0';
