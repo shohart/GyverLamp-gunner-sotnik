@@ -335,6 +335,7 @@ uint8_t WiFiManager::waitForConnectResult() {
         keepConnecting = false;
       }
       delay(100);
+      ESP.wdtFeed();
     }
     return status;
   }
