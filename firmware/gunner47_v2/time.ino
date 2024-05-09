@@ -1,11 +1,11 @@
 #ifdef USE_NTP
 
-#define RESOLVE_INTERVAL      (5UL * 60UL * 1000UL)                       // интервал проверки подключения к интеренету в миллисекундах (5 минут)
+#define RESOLVE_INTERVAL      (15UL * 1000UL)                             // интервал проверки подключения к интернету в миллисекундах (15 секунд)
                                                                           // при старте ESP пытается получить точное время от сервера времени в интрнете
                                                                           // эта попытка длится RESOLVE_TIMEOUT
                                                                           // если при этом отсутствует подключение к интернету (но есть WiFi подключение),
-                                                                          // модуль будет подвисать на RESOLVE_TIMEOUT каждое срабатывание таймера, т.е., 3 секунды
-                                                                          // чтобы избежать этого, будем пытаться узнать состояние подключения 1 раз в RESOLVE_INTERVAL (5 минут)
+                                                                          // модуль будет подвисать на RESOLVE_TIMEOUT каждое срабатывание таймера, т.е., 1,5 секунды
+                                                                          // чтобы избежать этого, будем пытаться узнать состояние подключения 1 раз в RESOLVE_INTERVAL (15 секунд)
                                                                           // попытки будут продолжаться до первой успешной синхронизации времени
                                                                           // до этого момента функции будильника работать не будут (или их можно ввести через USE_MANUAL_TIME_SETTING)
                                                                           // интервал последующих синхронизаций времени определяён в NTP_INTERVAL (30-60 минут)
@@ -57,8 +57,11 @@ if (espMode == 1U){
       }
 
 #ifdef PHONE_N_MANUAL_TIME_PRIORITY
-if (stillUseNTP)
+if (stillUseNTP)// && ntpServerAddressResolved) хз, нужно ли это проверять. по-моему, resolveNtpServerAddress вообще никому не нужен и используется, как ping
 #endif      
+//    if (!timeSynched || millis() > ntpTimeLastSync + NTP_INTERVAL) // uint32_t ntpTimeLastSync
+//    {// если прошло более NTP_INTERVAL, значит, можно попытаться получить время с сервера точного времени один разок
+//      phoneTimeLastSync = millis();
       if (timeClient.update()){
          #ifdef WARNING_IF_NO_TIME
            noTimeClear();
@@ -71,6 +74,7 @@ if (stillUseNTP)
            stillUseNTP = false;
          #endif
       }
+//    }//if (!timeSynched || millis() > ntpTimeLastSync + NTP_INTERVAL)
 }
       #endif //USE_NTP
       
@@ -175,8 +179,9 @@ void resolveNtpServerAddress(bool &ntpServerAddressResolved)              // ф�
     return;
   }
 
-  WiFi.hostByName(NTP_ADDRESS, ntpServerIp, RESOLVE_TIMEOUT);
-  if (ntpServerIp[0] <= 0)
+  //WiFi.hostByName(NTP_ADDRESS, ntpServerIp, RESOLVE_TIMEOUT);
+  //if (ntpServerIp[0] <= 0)
+  if (!WiFi.hostByName(NTP_ADDRESS, ntpServerIp, RESOLVE_TIMEOUT) || ntpServerIp[0] == 0 || ntpServerIp == IPAddress(255U, 255U, 255U, 255U))
   {
     #ifdef GENERAL_DEBUG
     if (ntpServerAddressResolved)
