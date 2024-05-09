@@ -230,7 +230,7 @@ void drawLetter(uint8_t letter, int8_t offset, CRGB letterColor)
       {
         if (thisBit)
         {
-          leds[getPixelNumber(offset + i, TEXT_HEIGHT + j)] = letterColor;
+          leds[XY(offset + i, TEXT_HEIGHT + j)] = letterColor;
         }
         else
         {
@@ -241,7 +241,7 @@ void drawLetter(uint8_t letter, int8_t offset, CRGB letterColor)
       {
         if (thisBit)
         {
-          leds[getPixelNumber(i, offset + TEXT_HEIGHT + j)] = letterColor;
+          leds[XY(i, offset + TEXT_HEIGHT + j)] = letterColor;
         }
         else
         {

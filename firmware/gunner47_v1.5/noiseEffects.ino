@@ -48,7 +48,7 @@ void madnessNoiseRoutine()
     for (uint8_t j = 0; j < HEIGHT; j++)
     {
       CRGB thisColor = CHSV(noise[j][i], 255, noise[i][j]);
-      drawPixelXY(i, j, thisColor);                         //leds[getPixelNumber(i, j)] = CHSV(noise[j][i], 255, noise[i][j]);
+      drawPixelXY(i, j, thisColor);                         //leds[XY(i, j)] = CHSV(noise[j][i], 255, noise[i][j]);
     }
   }
   ihue += 1;
@@ -223,7 +223,7 @@ void fillNoiseLED()
         bri = dim8_raw( bri * 2);
       }
       CRGB color = ColorFromPalette( currentPalette, index, bri);      
-      drawPixelXY(i, j, color);                             //leds[getPixelNumber(i, j)] = color;
+      drawPixelXY(i, j, color);                             //leds[XY(i, j)] = color;
     }
   }
   ihue += 1;

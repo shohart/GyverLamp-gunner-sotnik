@@ -29,7 +29,7 @@ void sparklesRoutine()
     uint8_t y = random(0U, HEIGHT);
     if (getPixColorXY(x, y) == 0U)
     {
-      leds[getPixelNumber(x, y)] = CHSV(random(0U, 255U), 255U, 255U);
+      leds[XY(x, y)] = CHSV(random(0U, 255U), 255U, 255U);
     }
   }
   fader(FADE_OUT_SPEED);
@@ -49,7 +49,7 @@ void fader(uint8_t step)
 
 void fadePixel(uint8_t i, uint8_t j, uint8_t step)          // новый фейдер
 {
-  int32_t pixelNum = getPixelNumber(i, j);
+  int32_t pixelNum = XY(i, j);
   if (getPixColor(pixelNum) == 0U) return;
 
   if (leds[pixelNum].r >= 30U ||
@@ -112,10 +112,10 @@ void fire2012WithPalette() {
       // for best results with color palettes.
       byte colorindex = scale8(heat[x][j], 240);
       if (modes[currentMode].Scale == 100)
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(WaterfallColors_p, colorindex);
+        leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(WaterfallColors_p, colorindex);
       else
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(CRGBPalette16( CRGB::Black, CHSV(modes[currentMode].Scale * 2.57, 255U, 255U) , CHSV(modes[currentMode].Scale * 2.57, 128U, 255U) , CRGB::White), colorindex);// 2.57 вместо 2.55, потому что 100 для белого цвета
-      //leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(fire_water ? HeatColors_p : OceanColors_p, colorindex);
+        leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(CRGBPalette16( CRGB::Black, CHSV(modes[currentMode].Scale * 2.57, 255U, 255U) , CHSV(modes[currentMode].Scale * 2.57, 128U, 255U) , CRGB::White), colorindex);// 2.57 вместо 2.55, потому что 100 для белого цвета
+      //leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(fire_water ? HeatColors_p : OceanColors_p, colorindex);
     }
   }
 }
@@ -236,7 +236,7 @@ void drawFrame(uint8_t pcnt, bool isColored) {                  // прорис�
                    baseSat,                                                       // S - когда колесо масштаба =100 - белый огонь (экономим на 1 эффекте)
                    (uint8_t)max(0, nextv)                                         // V
                  );
-    leds[getPixelNumber(x, 0)] = color;                                            // прорисовка цвета очага
+    leds[XY(x, 0)] = color;                                            // прорисовка цвета очага
   }
 
   //each row interpolates with the one before it
@@ -265,7 +265,7 @@ void drawFrame(uint8_t pcnt, bool isColored) {                  // прорис�
                        baseSat,                                                             // S - когда колесо масштаба =100 - белый огонь (экономим на 1 эффекте)
                        (uint8_t)max(0, nextv)                                               // V
                      );
-        leds[getPixelNumber(x, y)] = color;
+        leds[XY(x, y)] = color;
       }
       else if (y == 8U && SPARKLES) {                                               // если это самая нижняя строка искр - формитуем искорку из пламени
         if (random(0, 20) == 0 && getPixColorXY(x, y - 1U) != 0U) drawPixelXY(x, y, getPixColorXY(x, y - 2U));  // 20 = обратная величина количества искр
@@ -1331,9 +1331,9 @@ void poolRoutine()
     for (uint8_t x = 0U; x < WIDTH ; x++) {
       for (uint8_t y = 0U; y < HEIGHT; y++) {
         // y%32, x%32 - это для масштабирования эффекта на лампы размером большим, чем размер анимации 32х32, а также для произвольного сдвига текстуры
-        leds[getPixelNumber(x, y)] = CHSV(modes[currentMode].Scale * 2.55, 255U - pgm_read_byte(&aquariumGIF[GIFframe][(y + GIFshifty) % 32U][(x + GIFshiftx) % 32U]) * CAUSTICS_BR / 100U, 255U);
+        leds[XY(x, y)] = CHSV(modes[currentMode].Scale * 2.55, 255U - pgm_read_byte(&aquariumGIF[GIFframe][(y + GIFshifty) % 32U][(x + GIFshiftx) % 32U]) * CAUSTICS_BR / 100U, 255U);
         // чтобы регулятор Масштаб начал вместо цвета регулировать яркость бликов, нужно закомментировать предыдущую строчку и раскоментировать следующую
-        //        leds[getPixelNumber(x, y)] = CHSV(158U, 255U - pgm_read_byte(&aquariumGIF[GIFframe][(y+GIFshifty)%32U][(x+GIFshiftx)%32U]) * modes[currentMode].Scale / 100U, 255U);
+        //        leds[XY(x, y)] = CHSV(158U, 255U - pgm_read_byte(&aquariumGIF[GIFframe][(y+GIFshifty)%32U][(x+GIFshiftx)%32U]) * modes[currentMode].Scale / 100U, 255U);
       }
     }
     GIFframe++;
@@ -1422,7 +1422,7 @@ void snowStormRoutine()
   //        getPixColorXY(0U, i + 1U) == 0U &&
   //        getPixColorXY(0U, i - 1U) == 0U)
   //    {
-  //      leds[getPixelNumber(0U, i)] = CHSV(random(0, 200), SNOW_SATURATION, 255U);
+  //      leds[XY(0U, i)] = CHSV(random(0, 200), SNOW_SATURATION, 255U);
   //    }
   //  }
 
@@ -1434,7 +1434,7 @@ void snowStormRoutine()
         getPixColorXY(i + 1U, HEIGHT - 1U) == 0U &&
         getPixColorXY(i - 1U, HEIGHT - 1U) == 0U)
     {
-      leds[getPixelNumber(i, HEIGHT - 1U)] = CHSV(random(0, 200), SNOW_SATURATION, 255U);
+      leds[XY(i, HEIGHT - 1U)] = CHSV(random(0, 200), SNOW_SATURATION, 255U);
     }
   }
 
@@ -1480,7 +1480,7 @@ void starfallRoutine()
   //        getPixColorXY(0U, i + 1U) == 0U &&
   //        getPixColorXY(0U, i - 1U) == 0U)
   //    {
-  //      leds[getPixelNumber(0U, i)] = CHSV(random(0, 200), STAR_SATURATION, 255U);
+  //      leds[XY(0U, i)] = CHSV(random(0, 200), STAR_SATURATION, 255U);
   //    }
   //  }
 
@@ -1492,7 +1492,7 @@ void starfallRoutine()
         getPixColorXY(i + 1U, HEIGHT - 1U) == 0U &&
         getPixColorXY(i - 1U, HEIGHT - 1U) == 0U)
     {
-      leds[getPixelNumber(i, HEIGHT - 1U)] = CHSV(random(0, 200), STAR_SATURATION, 255U);
+      leds[XY(i, HEIGHT - 1U)] = CHSV(random(0, 200), STAR_SATURATION, 255U);
     }
   }
 
@@ -1688,7 +1688,7 @@ void ballsRoutine()
       coord[j][1U] = (HEIGHT - 1) * 10;
       vector[j][1U] = -vector[j][1U];
     }
-    leds[getPixelNumber(coord[j][0U] / 10, coord[j][1U] / 10)] =  ballColors[j];
+    leds[XY(coord[j][0U] / 10, coord[j][1U] / 10)] =  ballColors[j];
   }
 }
 
@@ -1714,29 +1714,10 @@ void lightBallsRoutine()
 
   // The color of each point shifts over time, each at a different speed.
   uint32_t ms = millis() / (modes[currentMode].Scale / 4 + 1);
-  leds[getPixelNumber( highByte(i * paintWidth) + BORDERTHICKNESS, highByte(j * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 29, 200U, 255U);
-  leds[getPixelNumber( highByte(j * paintWidth) + BORDERTHICKNESS, highByte(k * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 41, 200U, 255U);
-  leds[getPixelNumber( highByte(k * paintWidth) + BORDERTHICKNESS, highByte(m * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 37, 200U, 255U);
-  leds[getPixelNumber( highByte(m * paintWidth) + BORDERTHICKNESS, highByte(i * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 53, 200U, 255U);
-}
-// Trivial XY function for the SmartMatrix; use a different XY
-// function for different matrix grids. See XYMatrix example for code.
-
-uint16_t XY(uint8_t x, uint8_t y)
-{
-  uint16_t i;
-  if (y & 0x01)
-  {
-    // Odd rows run backwards
-    uint8_t reverseX = (WIDTH - 1) - x;
-    i = (y * WIDTH) + reverseX;
-  }
-  else
-  {
-    // Even rows run forwards
-    i = (y * WIDTH) + x;
-  }
-  return i % (WIDTH * HEIGHT + 1);
+  leds[XY( highByte(i * paintWidth) + BORDERTHICKNESS, highByte(j * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 29, 200U, 255U);
+  leds[XY( highByte(j * paintWidth) + BORDERTHICKNESS, highByte(k * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 41, 200U, 255U);
+  leds[XY( highByte(k * paintWidth) + BORDERTHICKNESS, highByte(m * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 37, 200U, 255U);
+  leds[XY( highByte(m * paintWidth) + BORDERTHICKNESS, highByte(i * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 53, 200U, 255U);
 }
 
 // ------------- блуждающий кубик -------------
@@ -1794,7 +1775,7 @@ void ballRoutine()
   {
     for (uint8_t j = 0U; j < ballSize; j++)
     {
-      leds[getPixelNumber(coordB[0U] / 10 + i, coordB[1U] / 10 + j)] = ballColor;
+      leds[XY(coordB[0U] / 10 + i, coordB[1U] / 10 + j)] = ballColor;
     }
   }
 }
@@ -1892,15 +1873,16 @@ const uint8_t e_centerY = (HEIGHT / 2) - 1;
 int8_t zD;
 int8_t zF;
 // The coordinates for 3 16-bit noise spaces.
-#define NUM_LAYERS 1
+#define NUM_LAYERS 1 // в кометах используется 1 слой, но для огня 2018 нужно 2
+#define NUM_LAYERSMAX 2
 
-uint32_t e_x[NUM_LAYERS];
-uint32_t e_y[NUM_LAYERS];
-uint32_t e_z[NUM_LAYERS];
-uint32_t e_scaleX[NUM_LAYERS];
-uint32_t e_scaleY[NUM_LAYERS];
+uint32_t e_x[NUM_LAYERSMAX];
+uint32_t e_y[NUM_LAYERSMAX];
+uint32_t e_z[NUM_LAYERSMAX];
+uint32_t e_scaleX[NUM_LAYERSMAX];
+uint32_t e_scaleY[NUM_LAYERSMAX];
 
-uint8_t noise3d[NUM_LAYERS][WIDTH][HEIGHT];
+uint8_t noise3d[NUM_LAYERSMAX][WIDTH][HEIGHT];
 
 uint8_t eNs_noisesmooth;
 bool eNs_isSetupped;
@@ -1933,40 +1915,44 @@ void FillNoise(int8_t layer) {
 
 void MoveX(int8_t delta) {
   //CLS2();
-  for (int8_t y = 0; y < HEIGHT; y++) {
-    for (int8_t x = 0; x < WIDTH - delta; x++) {
+  for (uint8_t y = 0; y < HEIGHT; y++) {
+    for (uint8_t x = 0; x < WIDTH - delta; x++) {
       ledsbuff[XY(x, y)] = leds[XY(x + delta, y)];
     }
-    for (int8_t x = WIDTH - delta; x < WIDTH; x++) {
+    for (uint8_t x = WIDTH - delta; x < WIDTH; x++) {
       ledsbuff[XY(x, y)] = leds[XY(x + delta - WIDTH, y)];
     }
   }
   //CLS();
   // write back to leds
-  for (uint8_t y = 0; y < HEIGHT; y++) {
-    for (uint8_t x = 0; x < WIDTH; x++) {
-      leds[XY(x, y)] = ledsbuff[XY(x, y)];
-    }
-  }
+  memcpy(leds, ledsbuff, sizeof(CRGB)* NUM_LEDS);
+  //какого хера тут было поштучное копирование - я хз
+  //for (uint8_t y = 0; y < HEIGHT; y++) {
+  //  for (uint8_t x = 0; x < WIDTH; x++) {
+  //    leds[XY(x, y)] = ledsbuff[XY(x, y)];
+  //  }
+  //}
 }
 
 void MoveY(int8_t delta) {
   //CLS2();
-  for (int8_t x = 0; x < WIDTH; x++) {
-    for (int8_t y = 0; y < HEIGHT - delta; y++) {
+  for (uint8_t x = 0; x < WIDTH; x++) {
+    for (uint8_t y = 0; y < HEIGHT - delta; y++) {
       ledsbuff[XY(x, y)] = leds[XY(x, y + delta)];
     }
-    for (int8_t y = HEIGHT - delta; y < HEIGHT; y++) {
+    for (uint8_t y = HEIGHT - delta; y < HEIGHT; y++) {
       ledsbuff[XY(x, y)] = leds[XY(x, y + delta - HEIGHT)];
     }
   }
   //CLS();
   // write back to leds
-  for (uint8_t y = 0; y < HEIGHT; y++) {
-    for (uint8_t x = 0; x < WIDTH; x++) {
-      leds[XY(x, y)] = ledsbuff[XY(x, y)];
-    }
-  }
+  memcpy(leds, ledsbuff, sizeof(CRGB)* NUM_LEDS);
+  //какого хера тут было поштучное копирование - я хз
+  //for (uint8_t y = 0; y < HEIGHT; y++) {
+  //  for (uint8_t x = 0; x < WIDTH; x++) {
+  //    leds[XY(x, y)] = ledsbuff[XY(x, y)];
+  //  }
+  //}
 }
 
 void MoveFractionalNoiseX(int8_t amplitude = 1, float shift = 0) {
@@ -2010,19 +1996,22 @@ void MoveFractionalNoiseY(int8_t amplitude = 1, float shift = 0) {
   }
   memcpy(leds, ledsbuff, sizeof(CRGB)* NUM_LEDS);
 }
+
 // NoiseSmearing(by StefanPetrick) Effect mod for GyverLamp by PalPalych
 void MultipleStream() { // 2 comets
-  dimAll(192); // < -- затухание эффекта для последующего кадрв
+  //dimAll(192); // < -- затухание эффекта для последующего кадрв
+  dimAll(255U - modes[currentMode].Scale * 2);
+
 
   // gelb im Kreis
   byte xx = 2 + sin8( millis() / 10) / 22;
   byte yy = 2 + cos8( millis() / 10) / 22;
-  leds[getPixelNumber( xx, yy)] = 0xFFFF00;
+  leds[XY( xx, yy)] = 0xFFFF00;
 
   // rot in einer Acht
   xx = 4 + sin8( millis() / 46) / 32;
   yy = 4 + cos8( millis() / 15) / 32;
-  leds[getPixelNumber( xx, yy)] = 0xFF0000;
+  leds[XY( xx, yy)] = 0xFF0000;
 
   // Noise
   e_x[0] += 3000;
@@ -2036,15 +2025,17 @@ void MultipleStream() { // 2 comets
 }
 
 void MultipleStream2() { // 3 comets
-  dimAll(220); // < -- затухание эффекта для последующего кадрв
+  //dimAll(220); // < -- затухание эффекта для последующего кадрв
+  dimAll(255U - modes[currentMode].Scale * 2);
+
   byte xx = 2 + sin8( millis() / 10) / 22;
   byte yy = 2 + cos8( millis() / 9) / 22;
-  leds[getPixelNumber( xx, yy)] += 0x0000FF;
+  leds[XY( xx, yy)] += 0x0000FF;
 
   xx = 4 + sin8( millis() / 10) / 32;
   yy = 4 + cos8( millis() / 7) / 32;
-  leds[getPixelNumber( xx, yy)] += 0xFF0000;
-  leds[getPixelNumber( e_centerX, e_centerY)] += 0xFFFF00;
+  leds[XY( xx, yy)] += 0xFF0000;
+  leds[XY( e_centerX, e_centerY)] += 0xFFFF00;
 
   e_x[0] += 3000;
   e_y[0] += 3000;
@@ -2057,9 +2048,11 @@ void MultipleStream2() { // 3 comets
 }
 
 void MultipleStream3() { // Fireline
-  dimAll(160); // < -- затухание эффекта для последующего кадрв
+  blurScreen(20); // без размытия как-то пиксельно, по-моему...
+  //dimAll(160); // < -- затухание эффекта для последующего кадров
+  dimAll(255U - modes[currentMode].Scale * 2);
   for (uint8_t i = 1; i < WIDTH; i += 3) {
-    leds[getPixelNumber( i, e_centerY)] += CHSV(i * 2 , 255, 255);
+    leds[XY( i, e_centerY)] += CHSV(i * 2 , 255, 255);
   }
   // Noise
   e_x[0] += 3000;
@@ -2072,23 +2065,11 @@ void MultipleStream3() { // Fireline
   MoveFractionalNoiseX(3);
 }
 
-void MultipleStream4() { // Comet
-  dimAll(184); // < -- затухание эффекта для последующего кадрв
-  CRGB _eNs_color = CHSV(millis(), 255, 255);
-  leds[getPixelNumber( e_centerX, e_centerY)] += _eNs_color;
-  // Noise
-  e_x[0] += 2000;
-  e_y[0] += 2000;
-  e_z[0] += 2000;
-  e_scaleX[0] = 4000;
-  e_scaleY[0] = 4000;
-  FillNoise(0);
-  MoveFractionalNoiseX(6);
-  MoveFractionalNoiseY(5, -0.5);
-}
 
 void MultipleStream5() { // Fractorial Fire
-  dimAll(140); // < -- затухание эффекта для последующего кадрв
+  blurScreen(20); // без размытия как-то пиксельно, по-моему...
+  //dimAll(140); // < -- затухание эффекта для последующего кадрв
+  dimAll(255U - modes[currentMode].Scale * 2);
   for (uint8_t i = 1; i < WIDTH; i += 2) {
     leds[XY( i, WIDTH - 1)] += CHSV(i * 2, 255, 255);
   }
@@ -2101,18 +2082,36 @@ void MultipleStream5() { // Fractorial Fire
   FillNoise(0);
   //MoveX(1);
   //MoveY(1);
-  MoveFractionalNoiseY(3, 1);
+  MoveFractionalNoiseY(2, 1);
   MoveFractionalNoiseX(2);
+}
+
+void MultipleStream4() { // Comet
+  //dimAll(184); // < -- затухание эффекта для последующего кадрв
+  dimAll(255U - modes[currentMode].Scale * 2);
+  
+  CRGB _eNs_color = CHSV(millis(), 255, 255);
+  leds[XY( e_centerX, e_centerY)] += _eNs_color;
+  // Noise
+  e_x[0] += 2000;
+  e_y[0] += 2000;
+  e_z[0] += 2000;
+  e_scaleX[0] = 4000;
+  e_scaleY[0] = 4000;
+  FillNoise(0);
+  MoveFractionalNoiseX(6);
+  MoveFractionalNoiseY(5, -0.5);
 }
 
 void MultipleStream8() { // Windows ))
   dimAll(96); // < -- затухание эффекта для последующего кадрв на 96/255*100=37%
+  //dimAll(255U - modes[currentMode].Scale * 2); // так какая-то хрень получается
   for (uint8_t y = 2; y < HEIGHT; y += 5) {
     for (uint8_t x = 2; x < WIDTH; x += 5) {
-      leds[getPixelNumber(x, y)]  += CHSV(x * y , 255, 255);
-      leds[getPixelNumber(x + 1, y)] += CHSV((x + 4) * y, 255, 255);
-      leds[getPixelNumber(x, y + 1)] += CHSV(x * (y + 4), 255, 255);
-      leds[getPixelNumber(x + 1, y + 1)] += CHSV((x + 4) * (y + 4), 255, 255);
+      leds[XY(x, y)]  += CHSV(x * y , 255, 255);
+      leds[XY(x + 1, y)] += CHSV((x + 4) * y, 255, 255);
+      leds[XY(x, y + 1)] += CHSV(x * (y + 4), 255, 255);
+      leds[XY(x + 1, y + 1)] += CHSV((x + 4) * (y + 4), 255, 255);
     }
   }
   // Noise
@@ -2124,19 +2123,6 @@ void MultipleStream8() { // Windows ))
   FillNoise(0);
   MoveFractionalNoiseX(3);
   MoveFractionalNoiseY(3);
-}
-
-void NoiseStreaming(uint8_t scale = 0) {
-  if (!eNs_isSetupped)eNs_setup;
-  uint8_t _selector = constrain(scale / 16, 0, 5);
-  uint8_t _scale = constrain((uint8_t)scale % 17, 0, 15);
-
-  if (_selector == 0) MultipleStream();
-  if (_selector == 1) MultipleStream2();
-  if (_selector == 2) MultipleStream3();
-  if (_selector == 3) MultipleStream4(); // Rainbow comet
-  if (_selector == 4) MultipleStream5();
-  if (_selector == 5) MultipleStream8();
 }
 
 // прописывается, если ранее нигде не была объявлена (это часто используемая функция у эффектов Stefan Petrick)
@@ -2152,10 +2138,10 @@ void dimAll(uint8_t value) {
 void RainbowCometRoutine() {      // <- ******* для оригинальной прошивки Gunner47 ******* (раскомментить/закоментить)
   dimAll(254U); // < -- затухание эффекта для последующего кадра
   CRGB _eNs_color = CHSV(millis() / modes[currentMode].Scale * 2, 255, 255);
-  leds[getPixelNumber(e_centerX, e_centerY)] += _eNs_color;
-  leds[getPixelNumber(e_centerX + 1, e_centerY)] += _eNs_color;
-  leds[getPixelNumber(e_centerX, e_centerY + 1)] += _eNs_color;
-  leds[getPixelNumber(e_centerX + 1, e_centerY + 1)] += _eNs_color;
+  leds[XY(e_centerX, e_centerY)] += _eNs_color;
+  leds[XY(e_centerX + 1, e_centerY)] += _eNs_color;
+  leds[XY(e_centerX, e_centerY + 1)] += _eNs_color;
+  leds[XY(e_centerX + 1, e_centerY + 1)] += _eNs_color;
 
   // Noise
   e_x[0] += 1500;
@@ -2173,10 +2159,10 @@ void ColorCometRoutine() {      // <- ******* для оригинальной п
   dimAll(254U); // < -- затухание эффекта для последующего кадра
   CRGB _eNs_color = CRGB::White;
   if (modes[currentMode].Scale < 100) _eNs_color = CHSV((modes[currentMode].Scale) * 2.57, 255, 255); // 2.57 вместо 2.55, потому что при 100 будет белый цвет
-  leds[getPixelNumber(e_centerX, e_centerY)] += _eNs_color;
-  leds[getPixelNumber(e_centerX + 1, e_centerY)] += _eNs_color;
-  leds[getPixelNumber(e_centerX, e_centerY + 1)] += _eNs_color;
-  leds[getPixelNumber(e_centerX + 1, e_centerY + 1)] += _eNs_color;
+  leds[XY(e_centerX, e_centerY)] += _eNs_color;
+  leds[XY(e_centerX + 1, e_centerY)] += _eNs_color;
+  leds[XY(e_centerX, e_centerY + 1)] += _eNs_color;
+  leds[XY(e_centerX + 1, e_centerY + 1)] += _eNs_color;
 
   // Noise
   e_x[0] += 1500;
@@ -2187,11 +2173,6 @@ void ColorCometRoutine() {      // <- ******* для оригинальной п
   FillNoise(0);
   MoveFractionalNoiseX(WIDTH / 2U - 1U);
   MoveFractionalNoiseY(HEIGHT / 2U - 1U);
-}
-
-// Кометы мини
-void NoiseStreamingRoutine() {      // <- ******* для оригинальной прошивки Gunner47 ******* (раскомментить/закоментить)
-  NoiseStreaming(modes[currentMode].Scale);  // <--- вызов эффекта с параметрами Noise Smearing by StefanPetrick
 }
 
 // --------------------------- эффект мячики ----------------------
@@ -2234,7 +2215,7 @@ void bballsLoop(bool isColored) {
   float bballsTCycle;
   dimAll(255U - modes[currentMode].Speed);
   for (int i = 0 ; i < bballsNUM ; i++) {
-    //leds[getPixelNumber(bballsX[i], bballsPos[i])] = CRGB::Black; // off for the next loop around  // теперь пиксели гасятся в dimAll()
+    //leds[XY(bballsX[i], bballsPos[i])] = CRGB::Black; // off for the next loop around  // теперь пиксели гасятся в dimAll()
 
     bballsTCycle =  millis() - bballsTLast[i] ; // Calculate the time since the last time the ball was on the ground
 
@@ -2264,7 +2245,7 @@ void bballsLoop(bool isColored) {
         else ++bballsX[i];
       }
     }
-    leds[getPixelNumber(bballsX[i], bballsPos[i])] = CHSV(bballsCOLOR[i], (isColored) ? 255U : 0U, 255U);
+    leds[XY(bballsX[i], bballsPos[i])] = CHSV(bballsCOLOR[i], (isColored) ? 255U : 0U, 255U);
   }
 }
 
@@ -2348,9 +2329,9 @@ void spiroRoutine() {
 
        //CRGB color = ColorFromPalette( PartyColors_p, (hue + i * spirooffset), 128U); // вообще-то палитра должна постоянно меняться, но до адаптации этого руки уже не дошли
        //CRGB color = ColorFromPalette(*curPalette, hue + i * spirooffset, 128U); // вот так уже прикручена к бегунку Масштаба. за
-       //leds[getPixelNumber(x2, y2)] += color;
+       //leds[XY(x2, y2)] += color;
 if (x2<WIDTH && y2<HEIGHT) // добавил проверки. не знаю, почему эффект подвисает без них
-        leds[getPixelNumber(x2, y2)] += (CRGB)ColorFromPalette(*curPalette, hue + i * spirooffset);
+        leds[XY(x2, y2)] += (CRGB)ColorFromPalette(*curPalette, hue + i * spirooffset);
         
         if((x2 == spirocenterX && y2 == spirocenterY) ||
            (x2 == spirocenterX && y2 == spirocenterY)) change = true;
@@ -2486,6 +2467,8 @@ void Sinusoid3Routine()
   }
 }
 
+
+
 // ============= водо/огне/лава/радуга/хренопад ===============
 // SPARKING: What chance (out of 255) is there that a new spark will be lit?
 // Higher chance = more roaring fire.  Lower chance = more flickery fire.
@@ -2541,19 +2524,19 @@ void fire2012WithPalette4in1() {
       // for best results with color palettes.
       byte colorindex = scale8(heat[x][j], 240);
       if  (modes[currentMode].Scale < 16) {            // Lavafall
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(LavaColors_p, colorindex);
+        leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(LavaColors_p, colorindex);
       } else if (modes[currentMode].Scale < 32) {      // Firefall
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(HeatColors_p, colorindex);
+        leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(HeatColors_p, colorindex);
       } else if (modes[currentMode].Scale < 48) {      // Waterfall
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(WaterfallColors4in1_p, colorindex);
+        leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(WaterfallColors4in1_p, colorindex);
       } else if (modes[currentMode].Scale < 64) {      // Skyfall
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(CloudColors_p, colorindex);
+        leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(CloudColors_p, colorindex);
       } else if (modes[currentMode].Scale < 80) {      // Forestfall
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(ForestColors_p, colorindex);
+        leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(ForestColors_p, colorindex);
       } else if (modes[currentMode].Scale < 96) {      // Rainbowfall
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(RainbowColors_p, colorindex);
+        leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(RainbowColors_p, colorindex);
       } else {                      // Aurora
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(RainbowStripeColors_p, colorindex);
+        leds[XY(x, (HEIGHT - 1) - j)] = ColorFromPalette(RainbowStripeColors_p, colorindex);
       }
     }
   }
@@ -2577,7 +2560,7 @@ void RainRoutine()
       }
   }
     else
-       leds[getPixelNumber(x,HEIGHT - 1U)]-=CHSV(0,0,random(96, 128));
+       leds[XY(x,HEIGHT - 1U)]-=CHSV(0,0,random(96, 128));
   }
   // сдвигаем всё вниз
   for (uint8_t x = 0U; x < WIDTH; x++)
@@ -3319,4 +3302,115 @@ void WaveRoutine() {
         }
         
         blurScreen(20); // @Palpalych советует делать размытие. вот в этом эффекте его явно не хватает...
+}
+
+// ============= ЭФФЕКТ ОГОНЬ 2018 ===============
+// https://gist.github.com/StefanPetrick/1ba4584e534ba99ca259c1103754e4c5
+// https://gist.github.com/StefanPetrick/819e873492f344ebebac5bcd2fdd8aa8
+// Адаптация от (c) SottNick
+
+// parameters and buffer for the noise array
+// (вместо закомментированных ситрок используются массивы и переменные от эффекта Кометы для экономии памяти)
+//define NUM_LAYERS 2 // менять бесполезно, так как в коде чётко использовано 2 слоя
+//uint32_t e_x[NUM_LAYERSMAX];
+//uint32_t e_y[NUM_LAYERSMAX];
+//uint32_t e_z[NUM_LAYERSMAX];
+//uint32_t e_scaleX[NUM_LAYERSMAX];
+//uint32_t e_scaleY[NUM_LAYERSMAX];
+//uint8_t noise3d[NUM_LAYERSMAX][WIDTH][HEIGHT];
+uint8_t fire18noise2[NUM_LAYERSMAX][WIDTH][HEIGHT];
+
+uint8_t fire18heat[NUM_LEDS];
+// this finds the right index within a serpentine matrix
+
+void Fire2018_2() {
+  const uint8_t CentreY =  HEIGHT / 2 + (HEIGHT % 2);
+  const uint8_t CentreX =  WIDTH / 2  + (WIDTH % 2) ;
+
+  // some changing values
+  uint16_t ctrl1 = inoise16(11 * millis(), 0, 0);
+  uint16_t ctrl2 = inoise16(13 * millis(), 100000, 100000);
+  uint16_t  ctrl = ((ctrl1 + ctrl2) / 2);
+
+  // parameters for the heatmap
+  uint16_t speed = 25;
+  e_x[0] = 3 * ctrl * speed;
+  e_y[0] = 20 * millis() * speed;
+  e_z[0] = 5 * millis() * speed ;
+  e_scaleX[0] = ctrl1 / 2;
+  e_scaleY[0] = ctrl2 / 2;
+
+  //calculate the noise data
+  uint8_t layer = 0;
+
+  for (uint8_t i = 0; i < WIDTH; i++) {
+    uint32_t ioffset = e_scaleX[layer] * (i - CentreX);
+    for (uint8_t j = 0; j < HEIGHT; j++) {
+      uint32_t joffset = e_scaleY[layer] * (j - CentreY);
+      uint16_t data = ((inoise16(e_x[layer] + ioffset, e_y[layer] + joffset, e_z[layer])) + 1);
+      noise3d[layer][i][j] = data >> 8;
+    }
+  }
+
+  // parameters for te brightness mask
+  speed = 20;
+  e_x[1] = 3 * ctrl * speed;
+  e_y[1] = 20 * millis() * speed;
+  e_z[1] = 5 * millis() * speed ;
+  e_scaleX[1] = ctrl1 / 2;
+  e_scaleY[1] = ctrl2 / 2;
+
+  //calculate the noise data
+  layer = 1;
+  for (uint8_t i = 0; i < WIDTH; i++) {
+    uint32_t ioffset = e_scaleX[layer] * (i - CentreX);
+    for (uint8_t j = 0; j < HEIGHT; j++) {
+      uint32_t joffset = e_scaleY[layer] * (j - CentreY);
+      uint16_t data = ((inoise16(e_x[layer] + ioffset, e_y[layer] + joffset, e_z[layer])) + 1);
+      noise3d[layer][i][j] = data >> 8;
+    }
+  }
+
+  // draw lowest line - seed the fire
+  for (uint8_t x = 0; x < WIDTH; x++) {
+    fire18heat[XY(x, HEIGHT - 1)] =  noise3d[0][WIDTH - 1 - x][CentreY - 1]; // хз, почему взято с середины. вожможно, нужно просто с 7 строки вне зависимости от высоты матрицы
+  }
+
+
+  //copy everything one line up
+  for (uint8_t y = 0; y < HEIGHT - 1; y++) {
+    for (uint8_t x = 0; x < WIDTH; x++) {
+      fire18heat[XY(x, y)] = fire18heat[XY(x, y + 1)];
+    }
+  }
+
+  //dim
+  for (uint8_t y = 0; y < HEIGHT - 1; y++) {
+    for (uint8_t x = 0; x < WIDTH; x++) {
+      uint8_t dim = noise3d[0][x][y];
+      // high value = high flames
+      dim = dim / 1.7;
+      dim = 255 - dim;
+      fire18heat[XY(x, y)] = scale8(fire18heat[XY(x, y)] , dim);
+    }
+  }
+
+  for (uint8_t y = 0; y < HEIGHT; y++) {
+    for (uint8_t x = 0; x < WIDTH; x++) {
+      // map the colors based on heatmap
+      //leds[XY(x, HEIGHT - 1 - y)] = CRGB( fire18heat[XY(x, y)], 1 , 0);
+      leds[XY(x, HEIGHT - 1 - y)] = CRGB( fire18heat[XY(x, y)], fire18heat[XY(x, y)] * 0.153, 0);// так оттенок лучше
+
+      //пытался понять, как регулировать оттенок пламени...
+      //  if (modes[currentMode].Scale > 50)
+      //    leds[XY(x, HEIGHT - 1 - y)] = CRGB( fire18heat[XY(x, y)], fire18heat[XY(x, y)] * (modes[currentMode].Scale % 50)  * 0.051, 0);
+      //  else
+      //    leds[XY(x, HEIGHT - 1 - y)] = CRGB( fire18heat[XY(x, y)], 1 , fire18heat[XY(x, y)] * modes[currentMode].Scale * 0.051);
+      //примерно понял
+   
+      // dim the result based on 2nd noise layer
+      leds[XY(x, HEIGHT - 1 - y)].nscale8(noise3d[1][x][y]);
+    }
+  }
+
 }
