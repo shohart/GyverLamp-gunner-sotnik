@@ -4424,3 +4424,343 @@ void MultipleStreamSmoke(bool isColored){
   blurScreen(20); // без размытия как-то пиксельно, наверное...  
 //} endif (modes[currentMode].Brightness & 0x01)
 }
+
+// ------------------------------ Дополнительные функции рисования ----------------------
+void DrawLine(int x1, int y1, int x2, int y2, CRGB color)
+{
+  int deltaX = abs(x2 - x1);
+  int deltaY = abs(y2 - y1);
+  int signX = x1 < x2 ? 1 : -1;
+  int signY = y1 < y2 ? 1 : -1;
+  int error = deltaX - deltaY;
+
+  drawPixelXY(x2, y2, color);
+  while (x1 != x2 || y1 != y2) {
+      drawPixelXY(x1, y1, color);
+      int error2 = error * 2;
+      if (error2 > -deltaY) {
+          error -= deltaY;
+          x1 += signX;
+      }
+      if (error2 < deltaX) {
+          error += deltaX;
+          y1 += signY;
+      }
+  }
+}
+
+void DrawLineF(float x1, float y1, float x2, float y2, CRGB color){
+  float deltaX = std::fabs(x2 - x1);
+  float deltaY = std::fabs(y2 - y1);
+  float error = deltaX - deltaY;
+
+  float signX = x1 < x2 ? 0.5 : -0.5;
+  float signY = y1 < y2 ? 0.5 : -0.5;
+
+  while (true) {
+      if ((signX > 0 && x1 > x2+signX) || (signX < 0 && x1 < x2+signX)) break;
+      if ((signY > 0 && y1 > y2+signY) || (signY < 0 && y1 < y2+signY)) break;
+      drawPixelXY(x1, y1, color);
+      float error2 = error;
+      if (error2 > -deltaY) {
+          error -= deltaY;
+          x1 += signX;
+      }
+      if (error2 < deltaX) {
+          error += deltaX;
+          y1 += signY;
+      }
+  }
+}
+
+void drawPixelXYF(float x, float y, CRGB color)
+{
+  // extract the fractional parts and derive their inverses
+  uint8_t xx = (x - (int)x) * 255, yy = (y - (int)y) * 255, ix = 255 - xx, iy = 255 - yy;
+  // calculate the intensities for each affected pixel
+  #define WU_WEIGHT(a,b) ((uint8_t) (((a)*(b)+(a)+(b))>>8))
+  uint8_t wu[4] = {WU_WEIGHT(ix, iy), WU_WEIGHT(xx, iy),
+                   WU_WEIGHT(ix, yy), WU_WEIGHT(xx, yy)};
+  // multiply the intensities by the colour, and saturating-add them to the pixels
+  for (uint8_t i = 0; i < 4; i++) {
+    int16_t xn = x + (i & 1), yn = y + ((i >> 1) & 1);
+    CRGB clr = getPixColorXY(xn, yn);
+    clr.r = qadd8(clr.r, (color.r * wu[i]) >> 8);
+    clr.g = qadd8(clr.g, (color.g * wu[i]) >> 8);
+    clr.b = qadd8(clr.b, (color.b * wu[i]) >> 8);
+    drawPixelXY(xn, yn, clr);
+  }
+}
+
+void drawCircleF(float x0, float y0, float radius, CRGB color){
+  float x = 0, y = radius, error = 0;
+  float delta = 1 - 2 * radius;
+
+  while (y >= 0) {
+    drawPixelXYF(x0 + x, y0 + y, color);
+    drawPixelXYF(x0 + x, y0 - y, color);
+    drawPixelXYF(x0 - x, y0 + y, color);
+    drawPixelXYF(x0 - x, y0 - y, color);
+    error = 2 * (delta + y) - 1;
+    if (delta < 0 && error <= 0) {
+      ++x;
+      delta += 2 * x + 1;
+      continue;
+    }
+    error = 2 * (delta - x) - 1;
+    if (delta > 0 && error > 0) {
+      --y;
+      delta += 1 - 2 * y;
+      continue;
+    }
+    ++x;
+    delta += 2 * (x - y);
+    --y;
+  }
+}
+
+// ------------------------------ ЭФФЕКТЫ ПИКАССО ----------------------
+// стырено откуда-то by @obliterator
+// https://github.com/DmytroKorniienko/FireLamp_JeeUI/blob/templ/src/effects.cpp
+
+//вместо класса Particle будем повторно использовать переменные из эффекта мячики
+//        float position_x = 0;
+float leaperX[bballsMaxNUM];
+//        float position_y = 0;
+float leaperY[bballsMaxNUM];
+//        float speed_x = 0;
+////float bballsVImpact[bballsMaxNUM];                   // As time goes on the impact velocity will change, so make an array to store those values
+//        float speed_y = 0;
+////float bballsCOR[bballsMaxNUM];                       // Coefficient of Restitution (bounce damping)
+//        CHSV color;
+////uint8_t bballsCOLOR[bballsMaxNUM];
+//        uint8_t hue_next = 0;
+//uint8_t bballsX[bballsMaxNUM] ;                       // прикручено при адаптации для распределения мячиков по радиусу лампы
+//        int8_t hue_step = 0;
+//uint16_t   bballsPos[bballsMaxNUM] ;                       // The integer position of the dot on the strip (LED index)
+
+void PicassoGenerate(bool reset){
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    //setCurrentPalette();    
+    FastLED.clear();
+    bballsNUM = (modes[currentMode].Scale - 1U) / 99.0 * (bballsMaxNUM - 1U) + 1U;
+    //bballsNUM = (modes[currentMode].Scale - 1U) % 11U / 10.0 * (bballsMaxNUM - 1U) + 1U;
+    if (bballsNUM > bballsMaxNUM) bballsNUM = bballsMaxNUM;
+    if (bballsNUM < 2U) bballsNUM = 2U;
+
+    double minSpeed = 0.2, maxSpeed = 0.8;
+    
+    for (uint8_t i = 0 ; i < bballsNUM ; i++) { 
+      leaperX[i] = random8(WIDTH);
+      leaperY[i] = random8(HEIGHT);
+
+      //curr->color = CHSV(random(1U, 255U), 255U, 255U);
+      bballsCOLOR[i] = random8();
+
+      bballsVImpact[i] = +((-maxSpeed / 3) + (maxSpeed * (float)random8(1, 100) / 100));
+      bballsVImpact[i] += bballsVImpact[i] > 0 ? minSpeed : -minSpeed;
+
+      bballsCOR[i] = +((-maxSpeed / 2) + (maxSpeed * (float)random8(1, 100) / 100));
+      bballsCOR[i] += bballsCOR[i] > 0 ? minSpeed : -minSpeed;
+
+      bballsX[i] = bballsCOLOR[i];
+
+    }
+  }
+  for (uint8_t i = 0 ; i < bballsNUM ; i++) {
+
+      if (reset) {
+        bballsX[i] = random8();
+        bballsPos[i] = (bballsX[i] - bballsCOLOR[i]) / 25;
+      }
+      if (bballsX[i] != bballsCOLOR[i] && bballsPos[i]) {
+        bballsCOLOR[i] += bballsPos[i];
+      }
+  }
+
+}
+
+void PicassoPosition(){
+  for (uint8_t i = 0 ; i < bballsNUM ; i++) { 
+    if (leaperX[i] + bballsVImpact[i] > WIDTH || leaperX[i] + bballsVImpact[i] < 0) {
+      bballsVImpact[i] = -bballsVImpact[i];
+    }
+
+    if (leaperY[i] + bballsCOR[i] > HEIGHT || leaperY[i] + bballsCOR[i] < 0) {
+      bballsCOR[i] = -bballsCOR[i];
+    }
+
+    leaperX[i] += bballsVImpact[i];
+    leaperY[i] += bballsCOR[i];
+  };
+}
+
+void PicassoRoutine(){
+  PicassoGenerate(false);
+  PicassoPosition();
+
+//  for (unsigned i = 0; i < numParticles - 2; i+=2) {
+//    Particle *p1 = (Particle *)&particles[i];
+//    Particle *p2 = (Particle *)&particles[i + 1];
+//    DrawLine(p1->position_x, p1->position_y, p2->position_x, p2->position_y, p1->color);
+//  }
+  for (uint8_t i = 0 ; i < bballsNUM - 2U ; i+=2) 
+    DrawLine(leaperX[i], leaperY[i], leaperX[i+1U], leaperY[i+1U], CHSV(bballsCOLOR[i], 255U, 255U));
+    //DrawLine(leaperX[i], leaperY[i], leaperX[i+1U], leaperY[i+1U], ColorFromPalette(*curPalette, bballsCOLOR[i]));
+
+
+  EVERY_N_MILLIS(20000){
+    PicassoGenerate(true);
+  }
+
+  blurScreen(80);
+}
+
+void PicassoRoutine2(){
+  PicassoGenerate(false);
+  PicassoPosition();
+  dimAll(180);
+
+//  for (unsigned i = 0; i < numParticles - 1; i++) {
+//    Particle *p1 = (Particle *)&particles[i];
+//    Particle *p2 = (Particle *)&particles[i + 1];
+//    DrawLineF(p1->position_x, p1->position_y, p2->position_x, p2->position_y, p1->color);
+//  }
+  for (uint8_t i = 0 ; i < bballsNUM - 1U ; i++) 
+    DrawLineF(leaperX[i], leaperY[i], leaperX[i+1U], leaperY[i+1U], CHSV(bballsCOLOR[i], 255U, 255U));
+    //DrawLineF(leaperX[i], leaperY[i], leaperX[i+1U], leaperY[i+1U], ColorFromPalette(*curPalette, bballsCOLOR[i]));
+
+  EVERY_N_MILLIS(20000){
+    PicassoGenerate(true);
+  }
+
+  blurScreen(80);
+
+}
+
+void PicassoRoutine3(){
+  PicassoGenerate(false);
+  PicassoPosition();
+  dimAll(180);
+
+//  for (unsigned i = 0; i < numParticles - 2; i+=2) {
+//    Particle *p1 = (Particle *)&particles[i];
+//    Particle *p2 = (Particle *)&particles[i + 1];
+//    drawCircleF(std::fabs(p1->position_x - p2->position_x), std::fabs(p1->position_y - p2->position_y), std::fabs(p1->position_x - p1->position_y), p1->color);
+//  }
+  for (uint8_t i = 0 ; i < bballsNUM - 2U ; i+=2) 
+    drawCircleF(fabs(leaperX[i] - leaperX[i+1U]), fabs(leaperY[i] - leaperX[i+1U]), fabs(leaperX[i] - leaperY[i]), CHSV(bballsCOLOR[i], 255U, 255U));
+    //drawCircleF(fabs(leaperX[i] - leaperX[i+1U]), fabs(leaperY[i] - leaperX[i+1U]), fabs(leaperX[i] - leaperY[i]), ColorFromPalette(*curPalette, bballsCOLOR[i]));
+    
+  EVERY_N_MILLIS(20000){
+    PicassoGenerate(true);
+  }
+
+  blurScreen(80);
+
+}
+
+
+// ------------------------------ ЭФФЕКТ ПРЫГУНЫ ----------------------
+// стырено откуда-то by @obliterator
+// https://github.com/DmytroKorniienko/FireLamp_JeeUI/blob/templ/src/effects.cpp
+
+//Leaper leapers[20];
+//вместо класса Leaper будем повторно использовать переменные из эффекта мячики
+//float x, y; будет:
+//float leaperX[bballsMaxNUM];
+//float leaperY[bballsMaxNUM];
+//float xd, yd; будет:
+////float bballsVImpact[bballsMaxNUM];                   // As time goes on the impact velocity will change, so make an array to store those values
+////float bballsCOR[bballsMaxNUM];                       // Coefficient of Restitution (bounce damping)
+//CHSV color; будет:
+////uint8_t bballsCOLOR[bballsMaxNUM];
+
+void LeapersRestart_leaper(uint8_t l) {
+  // leap up and to the side with some random component
+  bballsVImpact[l] = (1 * (float)random8(1, 100) / 100);
+  bballsCOR[l] = (2 * (float)random8(1, 100) / 100);
+
+  // for variety, sometimes go 50% faster
+  if (random8() < 12) {
+    bballsVImpact[l] += bballsVImpact[l] * 0.5;
+    bballsCOR[l] += bballsCOR[l] * 0.5;
+  }
+
+  // leap towards the centre of the screen
+  if (leaperX[l] > (WIDTH / 2)) {
+    bballsVImpact[l] = -bballsVImpact[l];
+  }
+}
+
+void LeapersMove_leaper(uint8_t l) {
+#define GRAVITY            0.06
+#define SETTLED_THRESHOLD  0.1
+#define WALL_FRICTION      0.95
+#define WIND               0.95    // wind resistance
+
+  leaperX[l] += bballsVImpact[l];
+  leaperY[l] += bballsCOR[l];
+
+  // bounce off the floor and ceiling?
+  if (leaperY[l] < 0 || leaperY[l] > HEIGHT - 1) {
+    bballsCOR[l] = (-bballsCOR[l] * WALL_FRICTION);
+    bballsVImpact[l] = ( bballsVImpact[l] * WALL_FRICTION);
+    leaperY[l] += bballsCOR[l];
+    if (leaperY[l] < 0) leaperY[l] = 0;
+    // settled on the floor?
+    if (leaperY[l] <= SETTLED_THRESHOLD && fabs(bballsCOR[l]) <= SETTLED_THRESHOLD) {
+      LeapersRestart_leaper(l);
+    }
+  }
+
+  // bounce off the sides of the screen?
+  if (leaperX[l] <= 0 || leaperX[l] >= WIDTH - 1) {
+    bballsVImpact[l] = (-bballsVImpact[l] * WALL_FRICTION);
+    if (leaperX[l] <= 0) {
+      leaperX[l] = bballsVImpact[l];
+    } else {
+      leaperX[l] = WIDTH - 1 - bballsVImpact[l];
+    }
+  }
+
+  bballsCOR[l] -= GRAVITY;
+  bballsVImpact[l] *= WIND;
+  bballsCOR[l] *= WIND;
+}
+
+
+void LeapersRoutine(){
+  //unsigned num = map(scale, 0U, 255U, 6U, sizeof(boids) / sizeof(*boids));
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    setCurrentPalette();    
+    //FastLED.clear();
+    //bballsNUM = (modes[currentMode].Scale - 1U) / 99.0 * (bballsMaxNUM - 1U) + 1U;
+    bballsNUM = (modes[currentMode].Scale - 1U) % 11U / 10.0 * (bballsMaxNUM - 1U) + 1U;
+    if (bballsNUM > bballsMaxNUM) bballsNUM = bballsMaxNUM;
+    //if (bballsNUM < 2U) bballsNUM = 2U;
+
+    for (uint8_t i = 0 ; i < bballsNUM ; i++) {
+      leaperX[i] = random8(WIDTH);
+      leaperY[i] = random8(HEIGHT);
+
+      //curr->color = CHSV(random(1U, 255U), 255U, 255U);
+      bballsCOLOR[i] = random8();
+    }
+  }
+
+  //myLamp.dimAll(0); накой хрен делать затухание на 100%?
+  FastLED.clear();
+
+  for (uint8_t i = 0; i < bballsNUM; i++) {
+    LeapersMove_leaper(i);
+    //drawPixelXYF(leaperX[i], leaperY[i], CHSV(bballsCOLOR[i], 255U, 255U));
+    drawPixelXYF(leaperX[i], leaperY[i], ColorFromPalette(*curPalette, bballsCOLOR[i]));
+  };
+
+  blurScreen(20);
+}

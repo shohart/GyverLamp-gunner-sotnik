@@ -381,7 +381,8 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
          }
     }
     else if (!strncmp_P(inputBuffer, PSTR("TXT"), 3)) {     // Принимаем текст для бегущей строки
-      String str = getValue(BUFF, '-', 1);
+      //String str = getValue(BUFF, '-', 1); // этим способом дефисы нельзя в бегущую строку передать. почему вообще разделитель - дефис?!
+      String str = (BUFF.length() > 4) ? BUFF.substring(4, BUFF.length()) : "";
       str.toCharArray(TextTicker, str.length() + 1);
     }
     else if (!strncmp_P(inputBuffer, PSTR("DRW"), 3)) {
