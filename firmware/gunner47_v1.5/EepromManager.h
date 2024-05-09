@@ -187,8 +187,10 @@ class EepromManager
 
     static void SaveOnFlag(bool* onFlag)
     {
+#ifndef DONT_TURN_ON_AFTER_SHUTDOWN
       EEPROM.write(EEPROM_LAMP_ON_ADDRESS, *onFlag);
       EEPROM.commit();
+#endif
     }
 
     static void SaveDawnMode(uint8_t* dawnMode)

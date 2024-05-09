@@ -34,9 +34,9 @@ void effectsTick()
         case EFF_ZEBRA:               zebraNoiseRoutine();                break;  // ( 9U) Зебра
         case EFF_FOREST:              forestNoiseRoutine();               break;  // (10U) Лес
         case EFF_OCEAN:               oceanNoiseRoutine();                break;  // (11U) Океан
-        case EFF_BBALLS:              BBallsRoutine(true);                break;  // (12U) Мячики
-        case EFF_BBALLS_WHITE:        BBallsRoutine(false);               break;  // (13U) Белые мячики
-        case EFF_BBALLS_TRACES:       BBallsRoutine(true);                break;  // (14U) Мячики со шлейфом
+        case EFF_BBALLS:              BBallsRoutine();                    break;  // (12U) Мячики
+        case EFF_BBALLS_TRACES:       BBallsRoutine();                    break;  // (13U) Мячики со шлейфом
+        case EFF_BALLS_BOUNCE:        bounceRoutine();                    break;  // (14U) Мячики без границ
         case EFF_SPIRO:               spiroRoutine();                     break;  // (15U) Спирали
         case EFF_PRISMATA:            PrismataRoutine();                  break;  // (16U) Призмата
         case EFF_FLOCK:               flockRoutine(false);                break;  // (17U) Стая
@@ -75,21 +75,23 @@ void effectsTick()
         case EFF_SPARKLES:            sparklesRoutine();                  break;  // (46U) Конфетти
         case EFF_TWINKLES:            twinklesRoutine();                  break;  // (47U) Мерцание
         case EFF_WAVES:               WaveRoutine();                      break;  // (48U) Волны
-        case EFF_SIMPLE_RAIN:         simpleRain();                       break;  // (49U) Тучка в банке
-        case EFF_STORMY_RAIN:         stormyRain();                       break;  // (50U) Гроза в банке
-        case EFF_COLOR_RAIN:          coloredRain();                      break;  // (51U) Осадки
-        case EFF_RAIN:                RainRoutine();                      break;  // (52U) Разноцветный дождь
-        case EFF_SNOW:                snowRoutine();                      break;  // (53U) Снегопад
-        case EFF_SNOWSTORM:           stormRoutine2(false);               break;  // (54U) Метель
-        case EFF_STARFALL:            stormRoutine2(true);                break;  // (55U) Звездопад
-        case EFF_LIGHTERS:            lightersRoutine();                  break;  // (56U) Светлячки
-        case EFF_LIGHTER_TRACES:      ballsRoutine();                     break;  // (57U) Светлячки со шлейфом
-        case EFF_PAINTBALL:           lightBallsRoutine();                break;  // (58U) Пейнтбол
-        case EFF_RAINBOW_VER:         rainbowVerticalRoutine();           break;  // (59U) Радуга вертикальная
-        case EFF_RAINBOW_HOR:         rainbowHorizontalRoutine();         break;  // (60U) Радуга горизонтальная
-        case EFF_RAINBOW_DIAG:        rainbowDiagonalRoutine();           break;  // (61U) Радуга диагональная
-        case EFF_CUBE:                ballRoutine();                      break;  // (62U) Блуждающий кубик
-        case EFF_TEXT:                text_running();                     break;  // (63U) Бегущая строка
+        case EFF_RINGS:               ringsRoutine();                     break;  // (49U) Кодовый замок
+        case EFF_CUBE2D:              cube2dRoutine();                    break;  // (50U) Кубик Рубика
+        case EFF_SIMPLE_RAIN:         simpleRain();                       break;  // (51U) Тучка в банке
+        case EFF_STORMY_RAIN:         stormyRain();                       break;  // (52U) Гроза в банке
+        case EFF_COLOR_RAIN:          coloredRain();                      break;  // (53U) Осадки
+        case EFF_RAIN:                RainRoutine();                      break;  // (54U) Разноцветный дождь
+        case EFF_SNOW:                snowRoutine();                      break;  // (55U) Снегопад
+        case EFF_SNOWSTORM:           stormRoutine2(false);               break;  // (56U) Метель
+        case EFF_STARFALL:            stormRoutine2(true);                break;  // (57U) Звездопад
+        case EFF_LIGHTERS:            lightersRoutine();                  break;  // (58U) Светлячки
+        case EFF_LIGHTER_TRACES:      ballsRoutine();                     break;  // (59U) Светлячки со шлейфом
+        case EFF_PAINTBALL:           lightBallsRoutine();                break;  // (60U) Пейнтбол
+        case EFF_RAINBOW_VER:         rainbowVerticalRoutine();           break;  // (61U) Радуга вертикальная
+        case EFF_RAINBOW_HOR:         rainbowHorizontalRoutine();         break;  // (62U) Радуга горизонтальная
+        case EFF_RAINBOW_DIAG:        rainbowDiagonalRoutine();           break;  // (63U) Радуга диагональная
+        case EFF_CUBE:                ballRoutine();                      break;  // (64U) Блуждающий кубик
+        case EFF_TEXT:                text_running();                     break;  // (65U) Бегущая строка
       }
       FastLED.show();
     }
@@ -128,11 +130,17 @@ void changePower()
   #if defined(MOSFET_PIN) && defined(MOSFET_LEVEL)          // установка сигнала в пин, управляющий MOSFET транзистором, соответственно состоянию вкл/выкл матрицы
   digitalWrite(MOSFET_PIN, ONflag ? MOSFET_LEVEL : !MOSFET_LEVEL);
   #endif
-  
+
   TimerManager::TimerRunning = false;
   TimerManager::TimerHasFired = false;
   TimerManager::TimeToFire = 0ULL;
-
+  #ifdef AUTOMATIC_OFF_TIME      
+    if (ONflag){
+      TimerManager::TimerRunning = true;
+      TimerManager::TimeToFire = millis() + AUTOMATIC_OFF_TIME;
+    }
+  #endif    
+  
   if (FavoritesManager::UseSavedFavoritesRunning == 0U)     // если выбрана опция Сохранять состояние (вкл/выкл) "избранного", то ни выключение модуля, ни выключение матрицы не сбрасывают текущее состояние (вкл/выкл) "избранного"
   {
       FavoritesManager::TurnFavoritesOff();

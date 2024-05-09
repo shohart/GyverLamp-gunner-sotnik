@@ -50,7 +50,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
     {
       sendCurrent(inputBuffer);
     }
-#ifdef GENERAL_DEBUG
+#if defined(GENERAL_DEBUG) || defined(USE_IOS_APP)
     else if (!strncmp_P(inputBuffer, PSTR("DEB"), 3))
     {
         #ifdef USE_NTP
