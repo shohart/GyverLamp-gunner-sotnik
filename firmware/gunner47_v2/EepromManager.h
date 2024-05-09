@@ -158,7 +158,7 @@ class EepromManager
 #endif
       *dawnMode = EEPROM.read(EEPROM_DAWN_MODE_ADDRESS);
       *currentMode = EEPROM.read(EEPROM_CURRENT_MODE_ADDRESS);
-      *buttonEnabled = EEPROM.read(EEPROM_ESP_BUTTON_ENABLED_ADDRESS);
+      if (*buttonEnabled) *buttonEnabled = EEPROM.read(EEPROM_ESP_BUTTON_ENABLED_ADDRESS);
 #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE      
       *random_on=EEPROM.read(EEPROM_RANDOM_ON_ADDRESS);
 #endif//#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE      
