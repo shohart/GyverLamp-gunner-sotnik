@@ -22,6 +22,14 @@
 */
 
 /*
+  Версия 2.87² эффектов в 1
+  - Эффекты Пикассо объединены в 1 эффект.
+  - Добавлены эффекты Огонь 2021, Пламя, Люменьер.
+  - Эффект Синусоид получил 8 дополнительных вариаций.
+  - Эффекту Радужный змей добавлена реакция на бегунок Масштаб.
+  - Мелкие изменения в эффектах Огонь 2012, Огонь 2020, Мячики, Прыгуны, Магма, 2 кометы, 3 кометы.
+  - Двойной клик на выключенной лампе теперь включит лампу и установит Таймер выключения на время "как в прошлый раз". Удобно перед сном включать.
+
   Небольшие изменения между версиями
   - Если удерживать кнопку на выключенной лампе, включится сразу режим "Белый свет".
   - Если включился режим "Белый свет" (не важно, каким способом) и при этом данный режим не добавлен в список для автоматического переключения эффектов, тогда он сам не переключится.
@@ -314,6 +322,7 @@
 #include "EepromManager.h"
 #ifdef USE_BLYNK
 #include <BlynkSimpleEsp8266.h>
+uint32_t blynkTimer;
 #endif
 
 
@@ -358,6 +367,9 @@ uint8_t selectedSettings = 0U;
 #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
 uint8_t random_on = RANDOM_SETTINGS_IN_CYCLE_MODE;
 #endif //RANDOM_SETTINGS_IN_CYCLE_MODE
+#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+uint8_t button_sleep_time = 1U;
+#endif //#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
 
 #ifdef ESP_USE_BUTTON
 #if (BUTTON_IS_SENSORY == 1)
@@ -365,7 +377,7 @@ GButton touch(BTN_PIN, LOW_PULL, NORM_OPEN);  // для сенсорной кн�
 #else
 GButton touch(BTN_PIN, HIGH_PULL, NORM_OPEN); // для физической (не сенсорной) кнопки HIGH_PULL. ну и кнопку нужно ставить без резистора в разрыв между пинами D2 и GND
 #endif
-#endif
+#endif //ESP_USE_BUTTON
 
 #ifdef OTA
 OtaManager otaManager(&showWarning);
@@ -410,7 +422,7 @@ uint32_t eepromTimeout;
 bool settChanged = false;
 bool buttonEnabled = true; // это важное первоначальное значение. нельзя делать false по умолчанию
 
-unsigned char matrixValue[8][16]; //это массив для эффекта Огонь
+unsigned char matrixValue[8][16]; //это массив для эффекта Огонь. что он тут делает? - хз
 
 bool TimerManager::TimerRunning = false;
 bool TimerManager::TimerHasFired = false;
@@ -479,7 +491,7 @@ void setup()
       EepromManager::SaveButtonEnabled(&buttonEnabled);
     }
     ESP.wdtFeed();
-    #elif defined(BUTTON_LOCK_ON_START) //&& (BUTTON_IS_SENSORY == 1) // не уверен, не будет ли проблем с механическими кнопками из-за этого
+    #elif defined(BUTTON_LOCK_ON_START) && (BUTTON_IS_SENSORY == 1) // с механическими кнопками надо считывать инвертированный сигнал, но смысла нет
     delay(1000);                                            // ожидание инициализации модуля кнопки ttp223 (по спецификации 250мс)
     if (digitalRead(BTN_PIN))
       buttonEnabled = false;
@@ -510,6 +522,9 @@ void setup()
     #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
     &random_on,
     #endif //ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+    #if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+    &button_sleep_time,
+    #endif //#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
     &(FavoritesManager::ReadFavoritesFromEeprom),
     &(FavoritesManager::SaveFavoritesToEeprom),
     &(restoreSettings)); // не придумал ничего лучше, чем делать восстановление настроек по умолчанию в обработчике инициализации EepromManager
@@ -737,8 +752,10 @@ if (Painting == 0) {
   #endif
 
   #ifdef USE_BLYNK
-  if (espMode == 1U && WiFi.isConnected())
-    Blynk.run();
+  if (espMode == 1U && WiFi.isConnected() && millis() - blynkTimer >= 500) { 
+    blynkTimer = millis(); // слишком часто запрашивать сервер - это плохо
+    Blynk.run(); 
+  }
   #endif
 
   #if defined(GENERAL_DEBUG) && GENERAL_DEBUG_TELNET
@@ -746,6 +763,10 @@ if (Painting == 0) {
   #endif
 }//if (Painting == 0)
   ESP.wdtFeed();
+  
+  #ifdef FIX_DEFECTIVE_BOARD
+  delay(FIX_DEFECTIVE_BOARD);
+  #endif
 }
 
 #ifndef WIFI_MANAGER_LIBRARY_PROPER_TEST
