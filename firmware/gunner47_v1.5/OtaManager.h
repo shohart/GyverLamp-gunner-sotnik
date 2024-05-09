@@ -101,7 +101,7 @@ class OtaManager
 
         #ifdef GENERAL_DEBUG
         LOG.print(F("Таймаут ожидания прошивки по воздуху превышен\nСброс флага в исходное состояние\nПерезагрузка\n"));
-        delay(500);
+        FastLED.delay(500);
         #endif
 
         showWarningDelegate(CRGB::Red, 2000U, 500U);        // мигание красным цветом 2 секунды (2 раза) - ожидание прошивки по воздуху прекращено, перезагрузка
@@ -157,7 +157,7 @@ class OtaManager
 
         #ifdef GENERAL_DEBUG
         LOG.print(F("Обновление по воздуху выполнено\nПерезапуск"));
-        delay(500);
+        FastLED.delay(500);
         #endif
       });
 

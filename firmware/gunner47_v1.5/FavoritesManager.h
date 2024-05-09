@@ -21,6 +21,7 @@ class FavoritesManager
     static uint16_t Dispersion;                             // дополнительный динамический (случайный) интервал (время между сменами эффектов)
     static uint8_t UseSavedFavoritesRunning;                // флаг, определяющий, нужно ли использовать сохранённое значение FavoritesRunning при перезапуске; еслин нет, "избранное" будет выключено при старте
     static uint8_t FavoriteModes[MODE_AMOUNT];              // массив, каждый элемент которого соответствует флагу "эффект №... добавлен в избранные"
+    static uint32_t nextModeAt;                             // ближайшее время переключения на следующий избранный эффект (millis())
 
     static void SetStatus(char* statusText)                 // помещает в statusText состояние режима работы избранных эффектов
     {
@@ -111,7 +112,11 @@ class FavoritesManager
         #ifdef GENERAL_DEBUG
         LOG.printf_P(PSTR("Переключение на следующий избранный режим: %d\n\n"), (*currentMode));
         #endif
-
+        
+//        #ifdef USE_BLYNK короче, раз там нет управления избранным, то и это мы поддерживать не будем
+//        updateRemoteBlynkParams();
+//        #endif
+        
         return true;
       }
 
@@ -154,7 +159,6 @@ class FavoritesManager
     }
 
   private:
-    static uint32_t nextModeAt;                             // ближайшее время переключения на следующий избранный эффект (millis())
     
     static bool isStatusTextCorrect(const char* statusText) // валидирует statusText (проверяет, правильное ли количество компонентов он содержит)
     {

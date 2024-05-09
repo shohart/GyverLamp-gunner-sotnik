@@ -92,7 +92,7 @@ void timeTick()
             if (i % 6 == 5) leds[i] = dawnColorMinus5;                    // 3я 1/10 диодов: -5 шагов
           }
           FastLED.setBrightness(255);
-          delay(1);
+          FastLED.delay(1);
           FastLED.show();
           dawnFlag = true;
         }
@@ -115,7 +115,7 @@ void timeTick()
         {
           dawnFlag = false;
           FastLED.clear();
-          delay(2);
+          FastLED.delay(2);
           FastLED.show();
           changePower();                                                  // выключение матрицы или установка яркости текущего эффекта в засисимости от того, была ли включена лампа до срабатывания будильника
         }

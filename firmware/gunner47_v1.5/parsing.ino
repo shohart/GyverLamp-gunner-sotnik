@@ -70,7 +70,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       settChanged = true;
       eepromTimeout = millis();
       FastLED.clear();
-      delay(1);
+      FastLED.delay(1);
       sendCurrent(inputBuffer);
       FastLED.setBrightness(modes[currentMode].Brightness);
 
@@ -79,6 +79,10 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       {
         MqttManager::needToPublish = true;
       }
+      #endif
+
+      #ifdef USE_BLYNK_PLUS
+      updateRemoteBlynkParams();
       #endif
     }
 
@@ -98,6 +102,10 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         MqttManager::needToPublish = true;
       }
       #endif
+
+      #ifdef USE_BLYNK_PLUS
+      updateRemoteBlynkParams();
+      #endif
     }
 
     else if (!strncmp_P(inputBuffer, PSTR("SPD"), 3))
@@ -114,6 +122,10 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       {
         MqttManager::needToPublish = true;
       }
+      #endif
+
+      #ifdef USE_BLYNK_PLUS
+      updateRemoteBlynkParams();
       #endif
     }
 
@@ -132,7 +144,11 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         MqttManager::needToPublish = true;
       }
       #endif
-    }
+
+      #ifdef USE_BLYNK_PLUS
+      updateRemoteBlynkParams();
+      #endif
+      }
 
     else if (!strncmp_P(inputBuffer, PSTR("P_ON"), 4))
     {
@@ -149,6 +165,9 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         MqttManager::needToPublish = true;
       }
       #endif
+      #ifdef USE_BLYNK_PLUS
+      updateRemoteBlynkParams();
+      #endif
     }
 
     else if (!strncmp_P(inputBuffer, PSTR("P_OFF"), 5))
@@ -164,6 +183,9 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       {
         MqttManager::needToPublish = true;
       }
+      #endif
+      #ifdef USE_BLYNK_PLUS
+      updateRemoteBlynkParams();
       #endif
     }
 
@@ -282,13 +304,13 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
     {
       #ifdef OTA
       otaManager.RequestOtaUpdate();
-      delay(70);
+      FastLED.delay(70);
       //if (otaManager.RequestOtaUpdate()) по идее, нужен положительный ответ от менеджера, но он не поступает с первого раза...
       otaManager.RequestOtaUpdate();
       //{
         currentMode = EFF_MATRIX;                             // принудительное включение режима "Матрица" для индикации перехода в режим обновления по воздуху
         FastLED.clear();
-        delay(1);
+        FastLED.delay(1);
         ONflag = true;
         changePower();
       //}
@@ -298,7 +320,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         TextTicker = "ESP_MODE=" + (char)(48 + espMode);
         currentMode = EFF_TEXT;                             // принудительное включение режима "Бегущая строка" для сообщения об ошибке
         FastLED.clear();
-        delay(1);
+        FastLED.delay(1);
         ONflag = true;
         changePower();
       }

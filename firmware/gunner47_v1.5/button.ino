@@ -40,6 +40,9 @@ void buttonTick()
       MqttManager::needToPublish = true;
     }
     #endif
+    #ifdef USE_BLYNK
+    updateRemoteBlynkParams();
+    #endif
   }
 
 
@@ -52,13 +55,16 @@ void buttonTick()
     settChanged = true;
     eepromTimeout = millis();
     FastLED.clear();
-    delay(1);
+    FastLED.delay(1);
 
     #if (USE_MQTT)
     if (espMode == 1U)
     {
       MqttManager::needToPublish = true;
     }
+    #endif
+    #ifdef USE_BLYNK
+    updateRemoteBlynkParams();
     #endif
   }
 
@@ -72,13 +78,16 @@ void buttonTick()
     settChanged = true;
     eepromTimeout = millis();
     FastLED.clear();
-    delay(1);
+    FastLED.delay(1);
 
     #if (USE_MQTT)
     if (espMode == 1U)
     {
       MqttManager::needToPublish = true;
     }
+    #endif
+    #ifdef USE_BLYNK
+    updateRemoteBlynkParams();
     #endif
   }
 
@@ -92,7 +101,7 @@ void buttonTick()
       ONflag = true;
       currentMode = EFF_MATRIX;                             // принудительное включение режима "Матрица" для индикации перехода в режим обновления по воздуху
       FastLED.clear();
-      delay(1);
+      FastLED.delay(1);
       changePower();
     }
     #endif
@@ -110,7 +119,7 @@ void buttonTick()
       digitalWrite(MOSFET_PIN, MOSFET_LEVEL);
       #endif
 
-      while(!fillString(WiFi.localIP().toString().c_str(), CRGB::White, false)) { delay(1); ESP.wdtFeed(); }
+      while(!fillString(WiFi.localIP().toString().c_str(), CRGB::White, false)) { FastLED.delay(1); ESP.wdtFeed(); }
 
       #if defined(MOSFET_PIN) && defined(MOSFET_LEVEL)      // установка сигнала в пин, управляющий MOSFET транзистором, соответственно состоянию вкл/выкл матрицы или будильника
       digitalWrite(MOSFET_PIN, ONflag || (dawnFlag && !manualOff) ? MOSFET_LEVEL : !MOSFET_LEVEL);
@@ -137,7 +146,7 @@ void buttonTick()
     #ifdef GENERAL_DEBUG
     LOG.printf_P(PSTR("Рабочий режим лампы изменён и сохранён в энергонезависимую память\nНовый рабочий режим: ESP_MODE = %d, %s\nРестарт...\n"),
       espMode, espMode == 0U ? F("WiFi точка доступа") : F("WiFi клиент (подключение к роутеру)"));
-    delay(1000);
+    FastLED.delay(1000);
     #endif
 
     showWarning(CRGB::Red, 3000U, 500U);                    // мигание красным цветом 3 секунды - смена рабочего режима лампы, перезагрузка
@@ -220,6 +229,11 @@ void buttonTick()
       MqttManager::needToPublish = true;
     }
     #endif
+    
+    #ifdef USE_BLYNK
+    updateRemoteBlynkParams();
+    #endif
+    
   }
 }
 #endif

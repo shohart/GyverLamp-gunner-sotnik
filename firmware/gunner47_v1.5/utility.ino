@@ -3,10 +3,8 @@
 // залить все
 void fillAll(CRGB color)
 {
-  for (int32_t i = 0; i < NUM_LEDS; i++)
-  {
+  for (int16_t i = 0; i < NUM_LEDS; i++)
     leds[i] = color;
-  }
 }
 
 // функция отрисовки точки по координатам X Y
@@ -25,7 +23,7 @@ uint32_t getPixColor(uint32_t thisSegm)
 {
   uint32_t thisPixel = thisSegm * SEGMENTS;
   if (thisPixel > NUM_LEDS - 1) return 0;
-  return (((uint32_t)leds[thisPixel].r << 16) | ((uint32_t)leds[thisPixel].g << 8 ) | (uint32_t)leds[thisPixel].b);
+  return (((uint32_t)leds[thisPixel].r << 16) | ((uint32_t)leds[thisPixel].g << 8 ) | (uint32_t)leds[thisPixel].b); // а почему не просто return (leds[thisPixel])?
 }
 
 // функция получения цвета пикселя в матрице по его координатам

@@ -8,6 +8,11 @@
 */
 
 /*
+  Версия 1.5.80 эффектов в 1
+  - В эффекте Цвет добавлена возможность выбора насыщенности бегунком Скорость.
+  - Добавлены эффекты Тени, Мотыльки, Лампа с мотыльками, ДНК, Змейки, Салют.
+  - Добавлена поддержка приложения Blynk (для iOS и Android) для ламп, имеющих постоянный доступ в Интернет. Если включить, будет всё немного подтормаживать.
+  
   Версия 1.5.74 эффекта в 1
   - Добавлен эффект Лавовая лампа.
   
@@ -231,6 +236,9 @@
 #include "TimerManager.h"
 #include "FavoritesManager.h"
 #include "EepromManager.h"
+#ifdef USE_BLYNK
+#include <BlynkSimpleEsp8266.h>
+#endif
 
 
 // --- ИНИЦИАЛИЗАЦИЯ ОБЪЕКТОВ ----------
@@ -304,7 +312,7 @@ uint32_t eepromTimeout;
 bool settChanged = false;
 bool buttonEnabled = true;
 
-unsigned char matrixValue[8][16];
+unsigned char matrixValue[8][16]; //это массив для эффекта Огонь
 
 bool TimerManager::TimerRunning = false;
 bool TimerManager::TimerHasFired = false;
@@ -352,7 +360,7 @@ void setup()
   for (uint8_t i = 0; i < 100; i++)                         // пауза 10 секунд в отладочном режиме, чтобы успеть подключиться по протоколу telnet до вывода первых сообщений
   {
     handleTelnetClient();
-    delay(100);
+    FastLED.delay(100);
     ESP.wdtFeed();
   }
   #endif
@@ -363,7 +371,7 @@ void setup()
   touch.setStepTimeout(BUTTON_STEP_TIMEOUT);
   touch.setClickTimeout(BUTTON_CLICK_TIMEOUT);
     #if ESP_RESET_ON_START
-    delay(1000);                                            // ожидание инициализации модуля кнопки ttp223 (по спецификации 250мс)
+    FastLED.delay(1000);                                            // ожидание инициализации модуля кнопки ttp223 (по спецификации 250мс)
     if (digitalRead(BTN_PIN))
     {
       wifiManager.resetSettings();                          // сброс сохранённых SSID и пароля при старте с зажатой кнопкой, если разрешено
@@ -494,12 +502,16 @@ void setup()
         WiFi.localIP() != IPAddress(STA_STATIC_IP[0], STA_STATIC_IP[1], STA_STATIC_IP[2], STA_STATIC_IP[3]))
     {
       LOG.println(F("Рестарт для применения заданного статического IP адреса..."));
-      delay(100);
+      FastLED.delay(100);
       ESP.restart();
     }
 
     LOG.print(F("IP адрес: "));
     LOG.println(WiFi.localIP());
+
+    #ifdef USE_BLYNK
+    Blynk.config(USE_BLYNK);
+    #endif
   }
   ESP.wdtFeed();
 
@@ -526,7 +538,7 @@ void setup()
 
 
   // ОСТАЛЬНОЕ
-  memset(matrixValue, 0, sizeof(matrixValue));
+  memset(matrixValue, 0, sizeof(matrixValue)); //это массив для эффекта Огонь. странно, что его нужно залить нулями
   randomSeed(micros());
   changePower();
   loadingFlag = true;
@@ -539,6 +551,7 @@ void loop()
 {
   parseUDP();
   if (Painting == 0) {
+
   effectsTick();
 
   EepromManager::HandleEepromTick(&settChanged, &eepromTimeout, &ONflag, 
@@ -573,7 +586,10 @@ void loop()
   {
     FastLED.setBrightness(modes[currentMode].Brightness);
     FastLED.clear();
-    delay(1);
+    FastLED.delay(1);
+    #ifdef USE_BLYNK
+    updateRemoteBlynkParams();
+    #endif
   }
 
   #if USE_MQTT
@@ -592,6 +608,11 @@ void loop()
     
     MqttManager::publishState();
   }
+  #endif
+
+  #ifdef USE_BLYNK
+  if (espMode == 1U && WiFi.isConnected())
+    Blynk.run();
   #endif
 
   #if defined(GENERAL_DEBUG) && GENERAL_DEBUG_TELNET
