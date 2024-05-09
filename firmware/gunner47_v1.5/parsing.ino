@@ -53,7 +53,8 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
 #if defined(GENERAL_DEBUG) || defined(USE_IOS_APP)
     else if (!strncmp_P(inputBuffer, PSTR("DEB"), 3))
     {
-        #ifdef USE_NTP
+        //#ifdef USE_NTP
+        #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
         getFormattedTime(inputBuffer);
         sprintf_P(inputBuffer, PSTR("OK %s"), inputBuffer);
         #else
@@ -317,7 +318,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       #ifdef EFF_TEXT_BLABLABLA // не доделал сообщение об ошибке
       else
       {
-        TextTicker = "ESP_MODE=" + (char)(48 + espMode);
+        TextTicker = "ESP_MODE=" + String(espMode);
         currentMode = EFF_TEXT;                             // принудительное включение режима "Бегущая строка" для сообщения об ошибке
         FastLED.clear();
         FastLED.delay(1);
@@ -402,10 +403,48 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
            }
          }
     }
-    else if (!strncmp_P(inputBuffer, PSTR("TXT"), 3)) {     // Принимаем текст для бегущей строки
-      //String str = getValue(BUFF, '-', 1); // этим способом дефисы нельзя в бегущую строку передать. почему вообще разделитель - дефис?!
-      String str = (BUFF.length() > 4) ? BUFF.substring(4, BUFF.length()) : "";
-      str.toCharArray(TextTicker, str.length() + 1);
+    else if (!strncmp_P(inputBuffer, PSTR("TXT"), 3)){     // Принимаем текст для бегущей строки
+      #ifdef USE_MANUAL_TIME_SETTING // вкорячиваем ручную синхранизацию времени пока что сюда. пока нет другой функции в приложении...
+        if (!strncmp_P(inputBuffer, PSTR("TXT-time="), 9) && (BUFF.length() > 15)){ 
+          // 0000000000111111
+          // 0123456789012345
+          // TXT-time=07:25 7
+          uint8_t mtH = BUFF.substring(9, 11).toInt();
+          uint8_t mtM = BUFF.substring(12, 14).toInt();
+          uint8_t mtD = BUFF.substring(15, 16).toInt();
+          if (mtH < 24U && mtM < 60U && mtD < 8U && mtD > 0U){
+            manualTimeShift = (((3650UL + mtD) * 24UL + mtH) * 60UL + mtM) * 60UL - millis() / 1000UL; // 3650 дней (521 полная неделя + 3 дня для сдвига на понедельник???)
+            timeSynched = true;
+            showWarning(CRGB::Blue, 2000U, 500U);     // мигание голубым цветом 2 секунды (2 раза) - время установлено
+          }
+/*    Я БЕЗ ПОНЯТИЯ, ПОЧЕМУ ТЕКСТ В БЕГУЩЕЙ СТРОКЕ С КАЖДЫМ РАЗОМ СДВИГАЕТСЯ ВСЁ СИЛЬНЕЕ
+            mtD = weekday(millis() / 1000UL + manualTimeShift);
+            mtD = (mtD == 7) ? 1 : mtD + 1;
+            String str = "УСТАНОВЛЕНО! ДЕНЬ НЕДЕЛИ = " + String(mtD) + String("\n");;
+//            String str = String(mtH) + ":" + String(mtM) + " ДН:" + String(mtD) + " =" + String(weekday(millis() / 1000UL + manualTimeShift) + 1U) + String("\n");;
+            
+            str.toCharArray(TextTicker, str.length() + 1);
+          }
+          else
+            TextTicker = "ОШИБКА ФОРМАТА ВРЕМЕНИ\n";
+        currentMode = EFF_TEXT;                             // принудительное включение режима "Бегущая строка" для сообщения результате
+        FastLED.clear();
+        FastLED.delay(1);
+        ONflag = true;
+        changePower();
+*/        
+        }
+        else
+        {  
+          //String str = getValue(BUFF, '-', 1); // этим способом дефисы нельзя в бегущую строку передать. почему вообще разделитель - дефис?!
+          String str = (BUFF.length() > 4) ? BUFF.substring(4, BUFF.length()) : "";
+          str.toCharArray(TextTicker, str.length() + 1);
+        }
+      #else
+        //String str = getValue(BUFF, '-', 1); // этим способом дефисы нельзя в бегущую строку передать. почему вообще разделитель - дефис?!
+        String str = (BUFF.length() > 4) ? BUFF.substring(4, BUFF.length()) : "";
+        str.toCharArray(TextTicker, str.length() + 1);
+      #endif
     }
     else if (!strncmp_P(inputBuffer, PSTR("DRW"), 3)) {
       drawPixelXY((int8_t)getValue(BUFF, ';', 1).toInt(), (int8_t)getValue(BUFF, ';', 2).toInt(), DriwingColor);
@@ -500,7 +539,8 @@ void sendCurrent(char *outputBuffer)
   sprintf_P(outputBuffer, PSTR("%s %u"), outputBuffer, (uint8_t)TimerManager::TimerRunning);
   sprintf_P(outputBuffer, PSTR("%s %u"), outputBuffer, (uint8_t)buttonEnabled);
 
-  #ifdef USE_NTP
+  //#ifdef USE_NTP
+  #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
   char timeBuf[9];
   getFormattedTime(timeBuf);
   sprintf_P(outputBuffer, PSTR("%s %s"), outputBuffer, timeBuf);

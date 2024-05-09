@@ -4519,12 +4519,14 @@ void clockRoutine(){
       deltaHue2 = 0; // яркость точки в данный момент
       deltaValue = modes[currentMode].Scale * 2.55; // выбранный оттенок цифр
     }
-
+/*
   #ifdef USE_NTP
   time_t currentLocalTime = localTimeZone.toLocal(timeClient.getEpochTime());
   #else
   time_t currentLocalTime = millis() / 1000UL;
   #endif
+*/  
+  time_t currentLocalTime = getCurrentLocalTime();
 
   if (minute(currentLocalTime) != hue2)
   {
@@ -5483,6 +5485,8 @@ void snakesRoutine(){
 //адаптация и переписал - kostyamat
 //https://gist.github.com/jasoncoon/0cccc5ba7ab108c0a373
 
+// не понравился
+/*
 #define MODEL_BORDER (HEIGHT - 4U)  // как далеко за экран может вылетить снаряд, если снаряд вылетает за экран, то всышка белого света (не особо логично)
 #define MODEL_WIDTH  (MODEL_BORDER + WIDTH  + MODEL_BORDER) // не трогать, - матиматика
 #define MODEL_HEIGHT (MODEL_BORDER + HEIGHT + MODEL_BORDER) // -//-
@@ -5588,7 +5592,7 @@ public:
         }
       }
     }   
-    if( (yv < -300) /* && (!(oyv < 0))*/ ) {
+    if (yv < -300) { // && (!(oyv < 0)) ) {
       // pinnacle
       if( theType == 1 ) {
 
@@ -5741,3 +5745,5 @@ void fireworksRoutine()
     }
 //  }
 }
+
+*/ 

@@ -8,6 +8,10 @@
 */
 
 /*
+  Версия 1.5.79 эффектов в 1
+  - Реализована возможность уставновки времени на лампе без подключения к интернету (через приложение для Андроид от @Koteyka - оно есть в архиве с прошивкой).
+  - Удалён эффект Салют.
+  
   Версия 1.5.80 эффектов в 1
   - В эффекте Цвет добавлена возможность выбора насыщенности бегунком Скорость.
   - Добавлены эффекты Тени, Мотыльки, Лампа с мотыльками, ДНК, Змейки, Салют.
@@ -224,6 +228,8 @@
 #include "fonts.h"
 #ifdef USE_NTP
 #include <NTPClient.h>
+//#endif
+//#if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
 #include <Timezone.h>
 #endif
 #include <TimeLib.h>
@@ -250,6 +256,8 @@ WiFiUDP Udp;
 #ifdef USE_NTP
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, NTP_ADDRESS, 0, NTP_INTERVAL); // объект, запрашивающий время с ntp сервера; в нём смещение часового пояса не используется (перенесено в объект localTimeZone); здесь всегда должно быть время UTC
+//#endif
+//#if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
   #ifdef SUMMER_WINTER_TIME
   TimeChangeRule summerTime = { SUMMER_TIMEZONE_NAME, SUMMER_WEEK_NUM, SUMMER_WEEKDAY, SUMMER_MONTH, SUMMER_HOUR, SUMMER_OFFSET };
   TimeChangeRule winterTime = { WINTER_TIMEZONE_NAME, WINTER_WEEK_NUM, WINTER_WEEKDAY, WINTER_MONTH, WINTER_HOUR, WINTER_OFFSET };
@@ -264,6 +272,12 @@ timerMinim timeTimer(3000);
 bool ntpServerAddressResolved = false;
 bool timeSynched = false;
 uint32_t lastTimePrinted = 0U;
+
+#ifdef USE_MANUAL_TIME_SETTING
+time_t manualTimeShift;
+//bool manualTimeSynched = false;
+#endif
+
 
 #ifdef ESP_USE_BUTTON
 GButton touch(BTN_PIN, LOW_PULL, NORM_OPEN); // для физической (не сенсорной) кнопки нужно поменять LOW_PULL на HIGH_PULL. ну и кнопку нужно ставить без резистора между находящимися рядом пинами D2 и GND
@@ -557,7 +571,8 @@ void loop()
   EepromManager::HandleEepromTick(&settChanged, &eepromTimeout, &ONflag, 
     &currentMode, modes, &(FavoritesManager::SaveFavoritesToEeprom));
 
-  #ifdef USE_NTP
+  //#ifdef USE_NTP
+  #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
   timeTick();
   #endif
 
@@ -579,7 +594,8 @@ void loop()
       &ONflag,
       &currentMode,
       &loadingFlag
-      #ifdef USE_NTP
+      //#ifdef USE_NTP
+      #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
       , &dawnFlag
       #endif
       ))
