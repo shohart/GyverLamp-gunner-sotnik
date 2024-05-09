@@ -92,7 +92,11 @@ if (stillUseNTP)// && ntpServerAddressResolved) хз, нужно ли это п�
       thisTime = hour(currentLocalTime) * 60 + minute(currentLocalTime);
       uint32_t thisFullTime = hour(currentLocalTime) * 3600 + minute(currentLocalTime) * 60 + second(currentLocalTime);
 
+      #ifdef PRINT_TIME
+      #if (PRINT_TIME != 0U) 
       printTime(thisTime, false, ONflag);                                 // проверка текущего времени и его вывод (если заказан и если текущее время соответстует заказанному расписанию вывода)
+      #endif
+      #endif
 
       // проверка рассвета
       if (alarms[thisDay].State &&                                                                                          // день будильника
