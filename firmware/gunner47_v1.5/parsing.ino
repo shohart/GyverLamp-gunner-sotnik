@@ -282,14 +282,28 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
     {
       #ifdef OTA
       otaManager.RequestOtaUpdate();
-      delay(50);
+      delay(70);
+      //if (otaManager.RequestOtaUpdate()) по идее, нужен положительный ответ от менеджера, но он не поступает с первого раза...
       otaManager.RequestOtaUpdate();
-      currentMode = EFF_MATRIX;                             // принудительное включение режима "Матрица" для индикации перехода в режим обновления по воздуху
-      FastLED.clear();
-      delay(1);
-      ONflag = true;
-      changePower();
-      #endif
+      //{
+        currentMode = EFF_MATRIX;                             // принудительное включение режима "Матрица" для индикации перехода в режим обновления по воздуху
+        FastLED.clear();
+        delay(1);
+        ONflag = true;
+        changePower();
+      //}
+      #ifdef EFF_TEXT_BLABLABLA // не доделал сообщение об ошибке
+      else
+      {
+        TextTicker = "ESP_MODE=" + (char)(48 + espMode);
+        currentMode = EFF_TEXT;                             // принудительное включение режима "Бегущая строка" для сообщения об ошибке
+        FastLED.clear();
+        delay(1);
+        ONflag = true;
+        changePower();
+      }
+      #endif // EFF_TEXT
+      #endif // OTA
     }
 
     else if (!strncmp_P(inputBuffer, PSTR("BTN"), 3))
@@ -407,7 +421,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         case 1U: // SET
           {
             memcpy(buff, &inputBuffer[5], strlen(inputBuffer));   // inputBuffer, начиная с символа 6
-            int eff = getValue(buff, ';', 0).toInt();
+            uint8_t eff = getValue(buff, ';', 0).toInt();
             modes[eff].Brightness = getValue(buff, ';', 1).toInt();
             modes[eff].Speed = getValue(buff, ';', 2).toInt();
             modes[eff].Scale = getValue(buff, ';', 3).toInt();
@@ -417,7 +431,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
           {
             String OutString;
             char replyPacket[MAX_UDP_BUFFER_SIZE];
-            for (int i = 0; i < MODE_AMOUNT; i++) {
+            for (uint8_t i = 0; i < MODE_AMOUNT; i++) {
               OutString = String(i) + ";" +  String(modes[i].Brightness) + ";" + String(modes[i].Speed) + ";" + String(modes[i].Scale) + "\n";
               OutString.toCharArray(replyPacket, MAX_UDP_BUFFER_SIZE);
               Udp.write(replyPacket);
