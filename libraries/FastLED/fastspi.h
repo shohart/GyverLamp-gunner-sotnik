@@ -128,10 +128,10 @@ class SPIOutput<SPI_UART1_DATA, SPI_UART1_CLOCK, SPI_SPEED> : public AVRUSART1SP
 #  if !defined(FASTLED_INTERNAL) && !defined(FASTLED_ALL_PINS_HARDWARE_SPI)
 #    ifdef FASTLED_HAS_PRAGMA_MESSAGE
 #      pragma message "No hardware SPI pins defined.  All SPI access will default to bitbanged output"
-#      pragma message "Р’СЃС‘ РёРґС‘С‚ С…РѕСЂРѕС€Рѕ. РћР¶РёРґР°Р№С‚Рµ!"
+#      pragma message "Всё идёт хорошо. Ожидайте!"
 #    else
 #      warning "No hardware SPI pins defined.  All SPI access will default to bitbanged output"
-#      warning "Р’СЃС‘ РёРґС‘С‚ С…РѕСЂРѕС€Рѕ. РћР¶РёРґР°Р№С‚Рµ!"
+#      warning "Всё идёт хорошо. Ожидайте!"
 #    endif
 #  endif
 #endif
