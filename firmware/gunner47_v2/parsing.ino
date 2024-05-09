@@ -80,7 +80,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       #endif // GET_TIME_FROM_PHONE
       sendCurrent(inputBuffer);
     }
-#if defined(GENERAL_DEBUG) || defined(USE_IOS_APP)
+#if defined(GENERAL_DEBUG) || defined(USE_OLD_IOS_APP)
     else if (!strncmp_P(inputBuffer, PSTR("DEB"), 3))
     {
         //#ifdef USE_NTP
@@ -700,7 +700,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
 //и в новых тоже появились
     else if (!strncmp_P(inputBuffer, PSTR("SETS"), 4)) // передача настроек эффектов по запросу от приложения (если поддерживается приложением)
     {
-      memcpy(buff, &inputBuffer[4], strlen(inputBuffer));  // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 5
+      memcpy(buff, &inputBuffer[4], 1U);  // взять первую циферку из строки inputBuffer, начиная с символа 5
       switch (atoi(buff))      
       {
         case 1U: // SET
@@ -710,6 +710,12 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
             modes[eff].Brightness = getValue(buff, ';', 1).toInt();
             modes[eff].Speed = getValue(buff, ';', 2).toInt();
             modes[eff].Scale = getValue(buff, ';', 3).toInt();
+            if (eff == currentMode) {
+              updateSets();
+              #ifdef USE_BLYNK_PLUS
+              updateRemoteBlynkParams();
+              #endif
+            }
             break;
           }
         case 2U: // READ
