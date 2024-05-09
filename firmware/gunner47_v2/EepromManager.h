@@ -27,6 +27,7 @@
  * 24        1        признак первого запуска (определяет необходимость первоначальной записи всех хранимых настроек)
  * 25        1        время до "рассвета" (dawnMode)
  * 26        1        номер текущего эффекта лампы (currentMode)
+ * 27        1        ВКЛ/ВЫКЛ режима случайного выбора настроек эффектов в режиме Цикл
  
  * ***************** массив modes (эффекты)
  * 50-52     3        режим №1:  яркость, скорость, масштаб (по одному байту)
@@ -68,6 +69,11 @@
 #define EEPROM_DAWN_MODE_ADDRESS             (25U)         // адрес в EEPROM памяти для записи времени до "рассвета"
 #define EEPROM_CURRENT_MODE_ADDRESS          (26U)         // адрес в EEPROM памяти для записи номера текущего эффекта лампы
 
+#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+#define EEPROM_RANDOM_ON_ADDRESS             (27U)         // адрес в EEPROM памяти для записи признака Вкл/Выкл случайного выбора настроек эффектов в режиме Цикл
+#endif  //RANDOM_SETTINGS_IN_CYCLE_MODE
+
+
 #define EEPROM_ALARM_STRUCT_SIZE             (3U)           // 1 байт - вкл/выкл; 2 байта - время от начала суток в минутах (0 - 1440)
 #define EEPROM_ALARM_START_ADDRESS           (0U)           // начальный адрес в EEPROM памяти для записи настроек будильников
 
@@ -86,8 +92,11 @@
 class EepromManager
 {
   public:
-    static void InitEepromSettings(ModeType modes[], AlarmType alarms[], uint8_t* espMode, bool* onFlag, uint8_t* dawnMode, uint8_t* currentMode, bool* buttonEnabled,
-      void (*readFavoritesSettings)(), void (*saveFavoritesSettings)(), void (*restoreDefaultSettings)())
+    static void InitEepromSettings(ModeType modes[], AlarmType alarms[], uint8_t* espMode, bool* onFlag, uint8_t* dawnMode, uint8_t* currentMode, bool* buttonEnabled
+      #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+      , uint8_t* random_on
+      #endif //ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+      , void (*readFavoritesSettings)(), void (*saveFavoritesSettings)(), void (*restoreDefaultSettings)())
     {
       EEPROM.begin(EEPROM_TOTAL_BYTES_USED);
       delay(50);
@@ -118,6 +127,9 @@ class EepromManager
         EEPROM.write(EEPROM_DAWN_MODE_ADDRESS, 0);
         EEPROM.write(EEPROM_CURRENT_MODE_ADDRESS, 0);
         EEPROM.write(EEPROM_ESP_BUTTON_ENABLED_ADDRESS, 1);
+        #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+          EEPROM.write(EEPROM_RANDOM_ON_ADDRESS, RANDOM_SETTINGS_IN_CYCLE_MODE);
+        #endif  //RANDOM_SETTINGS_IN_CYCLE_MODE        
 
         saveFavoritesSettings();
     
@@ -147,7 +159,18 @@ class EepromManager
       *dawnMode = EEPROM.read(EEPROM_DAWN_MODE_ADDRESS);
       *currentMode = EEPROM.read(EEPROM_CURRENT_MODE_ADDRESS);
       *buttonEnabled = EEPROM.read(EEPROM_ESP_BUTTON_ENABLED_ADDRESS);
+#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE      
+      *random_on=EEPROM.read(EEPROM_RANDOM_ON_ADDRESS);
+#endif//#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE      
     }
+
+#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+    static void Save_random_on( uint8_t* random_on)
+    {
+      EEPROM.write(EEPROM_RANDOM_ON_ADDRESS, *random_on);
+      EEPROM.commit();
+    } 
+#endif  //RANDOM_SETTINGS_IN_CYCLE_MODE 
 
     static void SaveModesSettings(uint8_t* currentMode, ModeType modes[])
     {
