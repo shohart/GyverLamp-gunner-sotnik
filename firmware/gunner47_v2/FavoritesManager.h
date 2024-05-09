@@ -86,6 +86,10 @@ class FavoritesManager
       #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
       , bool* dawnFlag
       #endif
+      #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+      , uint8_t* random_on
+      , uint8_t* selectedSettings
+      #endif
     )
     {
       if (FavoritesRunning == 0 ||
@@ -110,6 +114,10 @@ class FavoritesManager
         *currentMode = getNextFavoriteMode(currentMode);
         *loadingFlag = true;
         nextModeAt = getNextTime();
+
+        #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+          if (*random_on) *selectedSettings = 1U;
+        #endif //RANDOM_SETTINGS_IN_CYCLE_MODE
 
         #ifdef GENERAL_DEBUG
         LOG.printf_P(PSTR("Переключение на следующий избранный режим: %d\n\n"), (*currentMode));
