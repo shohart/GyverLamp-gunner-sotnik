@@ -49,7 +49,15 @@ void buttonTick()
   // двухкратное нажатие
   if (ONflag && clickCount == 2U)
   {
-    if (++currentMode >= MODE_AMOUNT) currentMode = 0;
+    #ifdef BUTTON_CHANGE_FAVORITES_MODES_ONLY
+      uint8_t lastMode = currentMode;
+      do {
+        if (++currentMode >= MODE_AMOUNT) currentMode = 0;
+      } while (FavoritesManager::FavoriteModes[currentMode] == 0 && currentMode != lastMode);
+    #else
+      if (++currentMode >= MODE_AMOUNT) currentMode = 0;
+    #endif
+    
     FastLED.setBrightness(modes[currentMode].Brightness);
     loadingFlag = true;
     settChanged = true;
@@ -77,7 +85,15 @@ void buttonTick()
   // трёхкратное нажатие
   if (ONflag && clickCount == 3U)
   {
-    if (--currentMode >= MODE_AMOUNT) currentMode = MODE_AMOUNT - 1;
+    #ifdef BUTTON_CHANGE_FAVORITES_MODES_ONLY
+      uint8_t lastMode = currentMode;
+      do {
+        if (--currentMode >= MODE_AMOUNT) currentMode = MODE_AMOUNT - 1;
+      } while (FavoritesManager::FavoriteModes[currentMode] == 0 && currentMode != lastMode);
+    #else
+      if (--currentMode >= MODE_AMOUNT) currentMode = MODE_AMOUNT - 1;
+    #endif
+    
     FastLED.setBrightness(modes[currentMode].Brightness);
     loadingFlag = true;
     settChanged = true;
@@ -168,7 +184,8 @@ void buttonTick()
 
 
   // кнопка только начала удерживаться
-  if (ONflag && touch.isHolded())
+  //if (ONflag && touch.isHolded())
+  if (touch.isHolded()) // пускай для выключенной лампы удержание кнопки включает белую лампу
   {
     brightDirection = !brightDirection;
     startButtonHolding = true;
@@ -176,7 +193,9 @@ void buttonTick()
 
 
   // кнопка нажата и удерживается
-  if (ONflag && touch.isStep())
+//  if (ONflag && touch.isStep())
+if (touch.isStep())
+  if (ONflag)
   {
     switch (touch.getHoldClicks())
     {
@@ -230,7 +249,17 @@ void buttonTick()
     settChanged = true;
     eepromTimeout = millis();
   }
-
+  else
+  {
+    currentMode = EFF_WHITE_COLOR;
+    ONflag = true;
+    changePower();
+    settChanged = true;
+    eepromTimeout = millis();
+    #ifdef USE_BLYNK
+    updateRemoteBlynkParams();
+    #endif
+  }
 
   // кнопка отпущена после удерживания
   if (ONflag && !touch.isHold() && startButtonHolding)      // кнопка отпущена после удерживания, нужно отправить MQTT сообщение об изменении яркости лампы
