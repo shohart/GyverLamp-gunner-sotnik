@@ -114,7 +114,7 @@ void effectsTick()
         case EFF_TEXT:                text_running();                     break;  // (85U) Бeгyщaя cтpoкa
 
       }
-      #ifdef WARNING_IF_NO_TIME
+      #ifdef WARNING_IF_NO_TIME_ON_EFFECTS_TOO
         if (!timeSynched)
           noTimeWarning();
       #endif
