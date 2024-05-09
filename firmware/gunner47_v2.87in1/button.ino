@@ -86,6 +86,25 @@ void buttonTick()
     #endif
   }
 
+  // двухкратное нажатие на выключенной лампе
+  #ifdef BUTTON_CAN_SET_SLEEP_TIMER
+  else if (clickCount == 2U)
+  {
+    // мигать об успехе операции лучше до вызова changePower(), иначе сперва мелькнут кадры текущего эффекта
+    showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+
+    ONflag = true;
+    changePower();
+    settChanged = true;
+    eepromTimeout = millis();
+    #ifdef USE_BLYNK
+    updateRemoteBlynkParams();
+    #endif
+
+    TimerManager::TimeToFire = millis() + button_sleep_time * 60UL * 1000UL;
+    TimerManager::TimerRunning = true;
+  }
+  #endif //BUTTON_CAN_SET_SLEEP_TIMER
 
   // трёхкратное нажатие
   else if (ONflag && clickCount == 3U)
@@ -268,7 +287,7 @@ if (touch.isStep())
     #ifdef BUTTON_PAUSE_AFTER_TURN_ON
     breakButtonHolding = false;
     #endif
-
+   
     currentMode = EFF_WHITE_COLOR;
     ONflag = true;
     changePower();
