@@ -346,10 +346,26 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
            {
              Udp.write(efList_3.c_str());
              Udp.write("\0");
+
+             #ifdef USE_DEFAULT_SETTINGS_RESET
+             // и здесь же после успешной отправки списка эффектов делаем сброс настроек эффектов на значения по умолчанию
+             restoreSettings();
+             loadingFlag = true;
+             settChanged = true;
+             eepromTimeout = millis();
+
+             #if (USE_MQTT)
+             if (espMode == 1U)
+             {
+               MqttManager::needToPublish = true;
+             }
+             #endif
+             #endif
+
              break;
            }
          }
-    }   
+    }
     else if (!strncmp_P(inputBuffer, PSTR("TXT"), 3)) {     // Принимаем текст для бегущей строки
       String str = getValue(BUFF, '-', 1);
       int str_len = str.length() + 1;

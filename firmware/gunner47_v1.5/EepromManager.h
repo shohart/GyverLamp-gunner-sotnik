@@ -87,14 +87,16 @@ class EepromManager
 {
   public:
     static void InitEepromSettings(ModeType modes[], AlarmType alarms[], uint8_t* espMode, bool* onFlag, uint8_t* dawnMode, int8_t* currentMode, bool* buttonEnabled,
-      void (*readFavoritesSettings)(), void (*saveFavoritesSettings)())
+      void (*readFavoritesSettings)(), void (*saveFavoritesSettings)(), void (*restoreDefaultSettings)())
     {
-      // записываем в EEPROM начальное состояние настроек, если их там ещё нет
       EEPROM.begin(EEPROM_TOTAL_BYTES_USED);
       delay(50);
 
+      // записываем в EEPROM начальное состояние настроек, если их там ещё нет
       if (EEPROM.read(EEPROM_FIRST_RUN_ADDRESS) != EEPROM_FIRST_RUN_MARK)
       {
+        restoreDefaultSettings(); // а почему бы нам не восстановить настройки по умолчанию в этом месте?
+
         EEPROM.write(EEPROM_FIRST_RUN_ADDRESS, EEPROM_FIRST_RUN_MARK);
         EEPROM.commit();
 

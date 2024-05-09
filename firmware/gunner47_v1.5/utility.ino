@@ -95,3 +95,20 @@ uint16_t getPixelNumber(uint8_t x, uint8_t y)
     return (THIS_Y * _WIDTH + _WIDTH - THIS_X - 1);
   }
 }
+
+// восстановление настроек эффектов на настройки по умолчанию
+void restoreSettings()
+{
+  if (defaultSettingsCOUNT == MODE_AMOUNT)          // если пользователь не накосячил с количеством строк в массиве настроек в Constants.h, используем их
+    for (uint8_t i = 0; i < MODE_AMOUNT; i++) {
+      modes[i].Brightness = pgm_read_byte(&defaultSettings[i][0]);
+      modes[i].Speed      = pgm_read_byte(&defaultSettings[i][1]);
+      modes[i].Scale      = pgm_read_byte(&defaultSettings[i][2]);
+    }
+  else                                              // иначе берём какие-то абстрактные
+    for (uint8_t i = 0; i < MODE_AMOUNT; i++) {
+      modes[i].Brightness = 50U;
+      modes[i].Speed      = 225U;
+      modes[i].Scale      = 40U;
+    }  
+}

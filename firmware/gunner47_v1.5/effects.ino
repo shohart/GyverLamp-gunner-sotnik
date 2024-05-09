@@ -114,7 +114,7 @@ void fire2012WithPalette() {
       if (modes[currentMode].Scale == 100)
         leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(WaterfallColors_p, colorindex);
       else
-        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(CRGBPalette16( CRGB::Black, CHSV(modes[currentMode].Scale * 2.57, 255U, 255U) , CHSV(modes[currentMode].Scale * 2.5, 128U, 255U) , CRGB::White), colorindex);
+        leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(CRGBPalette16( CRGB::Black, CHSV(modes[currentMode].Scale * 2.57, 255U, 255U) , CHSV(modes[currentMode].Scale * 2.57, 128U, 255U) , CRGB::White), colorindex);// 2.57 вместо 2.55, потому что 100 для белого цвета
       //leds[getPixelNumber(x, (HEIGHT - 1) - j)] = ColorFromPalette(fire_water ? HeatColors_p : OceanColors_p, colorindex);
     }
   }
@@ -204,7 +204,7 @@ void shiftUp() {                                            //подъем ка�
 void drawFrame(uint8_t pcnt, bool isColored) {                  // прорисовка нового кадра
   int32_t nextv;
 #ifdef UNIVERSE_FIRE                                            // если определен универсальный огонь  
-  //  uint8_t baseHue = (float)modes[currentMode].Scale * 2.57;
+  //  uint8_t baseHue = (float)modes[currentMode].Scale * 2.55;
   uint8_t baseHue = (float)(modes[currentMode].Scale - 1U) * 2.6;
 #else
   uint8_t baseHue = isColored ? 255U : 0U;
@@ -1649,7 +1649,9 @@ void ballsRoutine()
       coord[j][1U] = HEIGHT / 2 * 10;
       random(0, 2) ? sign = 1 : sign = -1;
       vector[j][1U] = random(4, 15) * sign;
-      ballColors[j] = CHSV(random(0, 9) * 28, 255U, 255U);
+      //ballColors[j] = CHSV(random(0, 9) * 28, 255U, 255U);
+      // цвет зависит от масштаба
+      ballColors[j] = CHSV((modes[currentMode].Scale * (j + 1)) % 256U, 255U, 255U);
     }
   }
 
@@ -2170,7 +2172,7 @@ void RainbowCometRoutine() {      // <- ******* для оригинальной 
 void ColorCometRoutine() {      // <- ******* для оригинальной прошивки Gunner47 ******* (раскомментить/закоментить)
   dimAll(254U); // < -- затухание эффекта для последующего кадра
   CRGB _eNs_color = CRGB::White;
-  if (modes[currentMode].Scale < 100) _eNs_color = CHSV((modes[currentMode].Scale) * 2.55, 255, 255);
+  if (modes[currentMode].Scale < 100) _eNs_color = CHSV((modes[currentMode].Scale) * 2.57, 255, 255); // 2.57 вместо 2.55, потому что при 100 будет белый цвет
   leds[getPixelNumber(e_centerX, e_centerY)] += _eNs_color;
   leds[getPixelNumber(e_centerX + 1, e_centerY)] += _eNs_color;
   leds[getPixelNumber(e_centerX, e_centerY + 1)] += _eNs_color;
@@ -2593,27 +2595,27 @@ void RainRoutine()
 // Адаптация от (c) SottNick
 
 void PrismataRoutine() {
-    if (loadingFlag)
-    {
-      loadingFlag = false;
-      if (modes[currentMode].Scale > 100) modes[currentMode].Scale = 100; // чтобы не было проблем при прошивке без очистки памяти
-      curPalette = palette_arr[(int)((float)modes[currentMode].Scale/100 * ((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1U))];
-    } 
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    if (modes[currentMode].Scale > 100) modes[currentMode].Scale = 100; // чтобы не было проблем при прошивке без очистки памяти
+    curPalette = palette_arr[(int)((float)modes[currentMode].Scale/100 * ((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1U))];
+  } 
   
   EVERY_N_MILLIS(33) {
     hue++; // используем переменную сдвига оттенка из функций радуги, чтобы не занимать память
   }
   blurScreen(20); // @Palpalych посоветовал делать размытие
-//  dimAll(255U - modes[currentMode].Scale * 2.55);
   dimAll(255U - modes[currentMode].Scale % 11U);
-
 
   for (int x = 0; x < WIDTH; x++)
   {
-//    uint8_t y = beatsin8(x + 1, 0, HEIGHT-1); // это я попытался распотрошить данную функцию до исходного кода и вставить в неё регулятор скорости
-    uint8_t beat = (GET_MILLIS() * (accum88(x + 1) << 8) * 28 * modes[currentMode].Speed) >> 24; // вместо 28 в оригинале было 280, а умножения на .Speed не было
+    //uint8_t y = beatsin8(x + 1, 0, HEIGHT-1); // это я попытался распотрошить данную функцию до исходного кода и вставить в неё регулятор скорости
+    // вместо 28 в оригинале было 280, умножения на .Speed не было, а вместо >>17 было (<<8)>>24. короче, оригинальная скорость достигается при бегунке .Speed=20
+    uint8_t beat = (GET_MILLIS() * (accum88(x + 1)) * 28 * modes[currentMode].Speed) >> 17;
     uint8_t y = scale8(sin8(beat), HEIGHT-1);
-//    и получилось!!!
+    //и получилось!!!
+    
     drawPixelXY(x, y, ColorFromPalette(*curPalette, x * 7 + hue));
   }
 }
@@ -3163,6 +3165,69 @@ void flockRoutine(bool predatorIs) {
         predatorPresent = predatorIs && !predatorPresent;
       }
 }
+
+// ============= ЭФФЕКТ ВИХРИ ===============
+// https://github.com/pixelmatix/aurora/blob/master/PatternFlowField.h
+// Адаптация (c) SottNick
+// используются переменные эффекта Стая. Без него работать не будет.
+
+uint16_t ff_x;
+uint16_t ff_y;
+uint16_t ff_z;
+
+static const uint8_t ff_speed = 1; // чем выше этот параметр, тем короче переходы (градиенты) между цветами. 1 - это самое красивое
+static const uint8_t ff_scale = 26; // чем больше этот параметр, тем больше "языков пламени" или как-то так. 26 - это норм
+    
+void whirlRoutine(bool oneColor) {
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    if (modes[currentMode].Scale > 100) modes[currentMode].Scale = 100; // чтобы не было проблем при прошивке без очистки памяти
+    curPalette = palette_arr[(int)((float)modes[currentMode].Scale/100 * ((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1U))];
+
+      ff_x = random16();
+      ff_y = random16();
+      ff_z = random16();
+
+      for (int i = 0; i < AVAILABLE_BOID_COUNT; i++) {
+        boids[i] = Boid(random(WIDTH), 0);
+      }
+  } 
+  dimAll(240);
+
+  for (int i = 0; i < AVAILABLE_BOID_COUNT; i++) {
+    Boid * boid = &boids[i];
+    
+    int ioffset = ff_scale * boid->location.x;
+    int joffset = ff_scale * boid->location.y;
+
+    byte angle = inoise8(ff_x + ioffset, ff_y + joffset, ff_z);
+
+    boid->velocity.x = (float) sin8(angle) * 0.0078125 - 1.0;
+    boid->velocity.y = -((float)cos8(angle) * 0.0078125 - 1.0);
+    boid->update();
+  
+    if (oneColor)
+      drawPixelXY(boid->location.x, boid->location.y, CHSV(modes[currentMode].Scale * 2.55, (modes[currentMode].Scale == 100) ? 0U : 255U, 255U)); // цвет белый для .Scale=100
+      // артефакт текстирования. удали. drawPixelXY(boid->location.x, boid->location.y, ColorFromPalette(CRGBPalette16( CHSV(modes[currentMode].Scale * 2.55, 255U, 255U), CHSV(modes[currentMode].Scale * 2.55, 255U, 255U) , CHSV(modes[currentMode].Scale * 2.55, 255U, 255U) , CHSV(modes[currentMode].Scale * 2.55, 255U, 255U)), angle ));
+    else
+      drawPixelXY(boid->location.x, boid->location.y, ColorFromPalette(*curPalette, angle + hue)); // + hue постепенно сдвигает палитру по кругу
+
+    if (boid->location.x < 0 || boid->location.x >= WIDTH || boid->location.y < 0 || boid->location.y >= HEIGHT) {
+      boid->location.x = random(WIDTH);
+      boid->location.y = 0;
+    }
+  }
+
+  EVERY_N_MILLIS(200) {
+    hue++;
+  }
+
+  ff_x += ff_speed;
+  ff_y += ff_speed;
+  ff_z += ff_speed;
+}
+
 // ============= ЭФФЕКТ ВОЛНЫ ===============
 // https://github.com/pixelmatix/aurora/blob/master/PatternWave.h
 // Адаптация от (c) SottNick
