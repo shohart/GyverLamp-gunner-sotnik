@@ -41,9 +41,8 @@
 - **schemes** - схемы подключения компонентов
 
 <a id="chapter-2"></a>
-## Схемы
-![SCHEME](https://github.com/AlexGyver/GyverLamp/blob/master/schemes/scheme1.jpg)
-![SCHEME](https://github.com/AlexGyver/GyverLamp/blob/master/schemes/scheme2.jpg)
+## Схема
+![SCHEME](https://github.com/SottNick/GyverLamp/blob/master/schemes/%D1%81%D0%B0%D0%BC%D0%B0%D1%8F_%D0%BF%D1%80%D0%BE%D1%81%D1%82%D0%B0%D1%8F.jpg)
 
 <a id="chapter-3"></a>
 ## Материалы и компоненты
