@@ -45,11 +45,11 @@ void effectsTick()
 
 
         case EFF_MATRIX:              matrixRoutine();                    break;  // (20U) Матрица
-        case EFF_FIRE_2018:           Fire2018_2();                       break;  // (21U) Огонь 2018
-        case EFF_FIRE:                fireRoutine(true);                  break;  // (22U) Огонь
-        case EFF_FIRE_WHITTE:         fireRoutine(true);                  break;  // (23U) Белый огонь
-        case EFF_FIRE_BLUE:           fireRoutine(true);                  break;  // (24U) Голубой огонь
-        case EFF_FIRE_GREEN:          fireRoutine(true);                  break;  // (25U) Зелёный огонь
+        case EFF_FIRE_2012:           fire2012again();                    break;  // (21U) Огонь 2012
+        case EFF_FIRE_2018:           Fire2018_2();                       break;  // (22U) Огонь 2018
+        case EFF_FIRE:                fireRoutine(true);                  break;  // (23U) Огонь
+        case EFF_FIRE_WHITTE:         fireRoutine(true);                  break;  // (24U) Белый огонь
+        case EFF_FIRE_GREEN:          fireRoutine(true);                  break;  // (25U) Цветной огонь
         case EFF_WHIRL:               whirlRoutine(true);                 break;  // (26U) Вихри пламени
         case EFF_WHIRL_MULTI:         whirlRoutine(false);                break;  // (27U) Разноцветные вихри
         case EFF_WATERFALL:           fire2012WithPalette();              break;  // (28U) Водопад
@@ -72,20 +72,23 @@ void effectsTick()
         case EFF_FIREFLY_TOP:         MultipleStream5();                  break;  // (43U) Верховой огонь
         case EFF_SNAKE:               MultipleStream8();                  break;  // (44U) Радужный змей
         case EFF_SPARKLES:            sparklesRoutine();                  break;  // (45U) Конфетти
-        case EFF_RAINBOW_VER:         rainbowVerticalRoutine();           break;  // (46U) Радуга вертикальная
-        case EFF_RAINBOW_HOR:         rainbowHorizontalRoutine();         break;  // (47U) Радуга горизонтальная
-        case EFF_RAINBOW_DIAG:        rainbowDiagonalRoutine();           break;  // (48U) Радуга диагональная
-        case EFF_WAVES:               WaveRoutine();                      break;  // (49U) Волны
-        case EFF_SNOW:                snowRoutine();                      break;  // (50U) Снегопад
-        case EFF_RAIN:                RainRoutine();                      break;  // (51U) Цветной дождь
+        case EFF_WAVES:               WaveRoutine();                      break;  // (46U) Волны
+        case EFF_SIMPLE_RAIN:         simpleRain();                       break;  // (47U) Тучка в банке
+        case EFF_STORMY_RAIN:         stormyRain();                       break;  // (48U) Гроза в банке
+        case EFF_COLOR_RAIN:          coloredRain();                      break;  // (49U) Осадки
+        case EFF_RAIN:                RainRoutine();                      break;  // (50U) Разноцветный дождь
+        case EFF_SNOW:                snowRoutine();                      break;  // (51U) Снегопад
         case EFF_SNOWSTORM:           snowStormRoutine();                 break;  // (52U) Метель
         case EFF_STARFALL:            starfallRoutine();                  break;  // (53U) Звездопад
         case EFF_LIGHTERS:            lightersRoutine();                  break;  // (54U) Светлячки
         case EFF_LIGHTER_TRACES:      ballsRoutine();                     break;  // (55U) Светлячки со шлейфом
         case EFF_PAINTBALL:           lightBallsRoutine();                break;  // (56U) Пейнтбол
-        case EFF_CUBE:                ballRoutine();                      break;  // (57U) Блуждающий кубик
-        case EFF_COLORS:              colorsRoutine();                    break;  // (58U) Смена цвета
-        case EFF_TEXT:                text_running();                     break;  // (59U) Бегущая строка
+        case EFF_RAINBOW_VER:         rainbowVerticalRoutine();           break;  // (57U) Радуга вертикальная
+        case EFF_RAINBOW_HOR:         rainbowHorizontalRoutine();         break;  // (58U) Радуга горизонтальная
+        case EFF_RAINBOW_DIAG:        rainbowDiagonalRoutine();           break;  // (59U) Радуга диагональная
+        case EFF_CUBE:                ballRoutine();                      break;  // (60U) Блуждающий кубик
+        case EFF_COLORS:              colorsRoutine();                    break;  // (61U) Смена цвета
+        case EFF_TEXT:                text_running();                     break;  // (62U) Бегущая строка
       }
       FastLED.show();
     }

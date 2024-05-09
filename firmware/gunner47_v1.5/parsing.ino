@@ -46,7 +46,12 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
     char buff[MAX_UDP_BUFFER_SIZE], *endToken = NULL;
     String BUFF = String(inputBuffer);
 
-    if (!strncmp_P(inputBuffer, PSTR("DEB"), 3))
+    if (!strncmp_P(inputBuffer, PSTR("GET"), 3))
+    {
+      sendCurrent(inputBuffer);
+    }
+#ifdef GENERAL_DEBUG
+    else if (!strncmp_P(inputBuffer, PSTR("DEB"), 3))
     {
         #ifdef USE_NTP
         getFormattedTime(inputBuffer);
@@ -55,12 +60,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         strcpy_P(inputBuffer, PSTR("OK --:--"));
         #endif
     }
-
-    else if (!strncmp_P(inputBuffer, PSTR("GET"), 3))
-    {
-      sendCurrent(inputBuffer);
-    }
-
+#endif    
     else if (!strncmp_P(inputBuffer, PSTR("EFF"), 3))
     {
       EepromManager::SaveModesSettings(&currentMode, modes);
@@ -368,15 +368,10 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
     }
     else if (!strncmp_P(inputBuffer, PSTR("TXT"), 3)) {     // Принимаем текст для бегущей строки
       String str = getValue(BUFF, '-', 1);
-      int str_len = str.length() + 1;
-      str.toCharArray(TextTicker, str_len);
+      str.toCharArray(TextTicker, str.length() + 1);
     }
     else if (!strncmp_P(inputBuffer, PSTR("DRW"), 3)) {
-      String xx = getValue(BUFF, ';', 1);
-      String yy = getValue(BUFF, ';', 2);
-      int8_t X = (int8_t)xx.toInt();
-      int8_t Y = (int8_t)yy.toInt();
-      drawPixelXY(X, Y, DriwingColor);
+      drawPixelXY((int8_t)getValue(BUFF, ';', 1).toInt(), (int8_t)getValue(BUFF, ';', 2).toInt(), DriwingColor);
       FastLED.show();
     }
     else if (!strncmp_P(inputBuffer, PSTR("CLR"), 3)) {
@@ -384,10 +379,11 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       FastLED.show();
     }
     else if (!strncmp_P(inputBuffer, PSTR("COL"), 3)) {
-      String R = getValue(BUFF, ';', 1);
-      String G = getValue(BUFF, ';', 2);
-      String B = getValue(BUFF, ';', 3);
-      DriwingColor = CRGB(R.toInt(), B.toInt(), G.toInt());
+      #ifdef USE_OLD_APP_FROM_KOTEYKA
+       DriwingColor = CRGB(getValue(BUFF, ';', 1).toInt(), getValue(BUFF, ';', 3).toInt(), getValue(BUFF, ';', 2).toInt());
+      #else
+       DriwingColor = CRGB(getValue(BUFF, ';', 1).toInt(), getValue(BUFF, ';', 2).toInt(), getValue(BUFF, ';', 3).toInt());
+      #endif
     }
     else if (!strncmp_P(inputBuffer, PSTR("DRAWOFF"), 7)) {
       Painting = 0;
@@ -399,6 +395,35 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       FastLED.clear();
       FastLED.show();
     } 
+#ifndef USE_OLD_APP_FROM_KOTEYKA
+    else if (!strncmp_P(inputBuffer, PSTR("SETS"), 4)) // передача настроек эффектов по запросу от приложения (если поддерживается приложением)
+    {
+      memcpy(buff, &inputBuffer[4], strlen(inputBuffer));  // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 5
+      switch (atoi(buff))      
+      {
+        case 1U: // SET
+          {
+            memcpy(buff, &inputBuffer[5], strlen(inputBuffer));   // inputBuffer, начиная с символа 6
+            int eff = getValue(buff, ';', 0).toInt();
+            modes[eff].Brightness = getValue(buff, ';', 1).toInt();
+            modes[eff].Speed = getValue(buff, ';', 2).toInt();
+            modes[eff].Scale = getValue(buff, ';', 3).toInt();
+            break;
+          }
+        case 2U: // READ
+          {
+            String OutString;
+            char replyPacket[MAX_UDP_BUFFER_SIZE];
+            for (int i = 0; i < MODE_AMOUNT; i++) {
+              OutString = String(i) + ";" +  String(modes[i].Brightness) + ";" + String(modes[i].Speed) + ";" + String(modes[i].Scale) + "\n";
+              OutString.toCharArray(replyPacket, MAX_UDP_BUFFER_SIZE);
+              Udp.write(replyPacket);
+            }
+            break;
+          }
+      }
+    }
+#endif
     else
     {
       inputBuffer[0] = '\0';
