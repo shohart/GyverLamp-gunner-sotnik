@@ -757,8 +757,10 @@ void pulseRoutine(uint8_t PMode) {
             break;
           case 8U:                    // 100 - случайные пузыри
             _sat =  qsub8( 255U, cos8 (128U / (step + 1U) * (i + 1U))) ;
-            deltaHue = hue;
-            _pulse_color = CHSV(deltaHue, _sat, _dark);
+            //deltaHue = hue; // вместо этого будет решулировка сдвига оттенка
+            //_pulse_color = CHSV(deltaHue, _sat, _dark);
+            deltaHue2 = modes[currentMode].Scale;
+            _pulse_color = CHSV(hue2, _sat, _dark);
             break;
         }
         drawCircle(pulsCenterX, pulsCenterY, i, _pulse_color  );
@@ -1838,7 +1840,7 @@ bool isColored = modes[currentMode].Speed & 0x01; // сворачиваем 2 э
     Saturation = modes[currentMode].Scale * 2.55;
   else
   {
-    e_TAIL_STEP = 255U - modes[currentMode].Scale * 2.55;
+    e_TAIL_STEP = 255U - modes[currentMode].Scale * 2.5;
   }
   for (uint8_t x = 0U; x < WIDTH - 1U; x++) // fix error i != 0U
   {
@@ -3018,16 +3020,16 @@ void BBallsRoutine() {
 //    byte spirohueoffset = 0; // будем использовать переменную сдвига оттенка hue из эффектов Радуга
     
 
-    const uint8_t spiroradiusx = WIDTH / 4 - 1;
-    const uint8_t spiroradiusy = HEIGHT / 4 - 1;
+    const uint8_t spiroradiusx = WIDTH / 4;// - 1;
+    const uint8_t spiroradiusy = HEIGHT / 4;// - 1;
     
     const uint8_t spirocenterX = WIDTH / 2;
     const uint8_t spirocenterY = HEIGHT / 2;
     
     const uint8_t spirominx = spirocenterX - spiroradiusx;
-    const uint8_t spiromaxx = spirocenterX + spiroradiusx + 1;
+    const uint8_t spiromaxx = spirocenterX + spiroradiusx - (WIDTH%2 == 0 ? 1:0);//+ 1;
     const uint8_t spirominy = spirocenterY - spiroradiusy;
-    const uint8_t spiromaxy = spirocenterY + spiroradiusy + 1;
+    const uint8_t spiromaxy = spirocenterY + spiroradiusy - (HEIGHT%2 == 0 ? 1:0);//+ 1;
 
     uint8_t spirocount = 1;
     uint8_t spirooffset = 256 / spirocount;
@@ -5414,7 +5416,7 @@ void MultipleStreamSmoke(bool isColored){
 //        uint8_t hue_next = 0;
 //uint8_t trackingObjectState[enlargedOBJECT_MAX_COUNT] ;                       // прикручено при адаптации для распределения мячиков по радиусу лампы
 //        int8_t hue_step = 0;
-//uint16_t   trackingObjectPosY[enlargedOBJECT_MAX_COUNT] ;                       // The integer position of the dot on the strip (LED index)
+//float   trackingObjectSpeedX[trackingOBJECT_MAX_COUNT];                       // The integer position of the dot on the strip (LED index)
 
 void PicassoGenerate(bool reset){
   if (loadingFlag)
@@ -5447,13 +5449,12 @@ void PicassoGenerate(bool reset){
     }
   }
   for (uint8_t i = 0 ; i < enlargedObjectNUM ; i++) {
-
       if (reset) {
         trackingObjectState[i] = random8();
-        trackingObjectPosY[i] = (trackingObjectState[i] - trackingObjectHue[i]) / 25;
+        trackingObjectSpeedX[i] = (trackingObjectState[i] - trackingObjectHue[i]) / 25;
       }
-      if (trackingObjectState[i] != trackingObjectHue[i] && trackingObjectPosY[i]) {
-        trackingObjectHue[i] += trackingObjectPosY[i];
+      if (trackingObjectState[i] != trackingObjectHue[i] && trackingObjectSpeedX[i]) {
+        trackingObjectHue[i] += trackingObjectSpeedX[i];
       }
   }
 
@@ -5966,8 +5967,8 @@ void snakesRoutine(){
       //trackingObjectShift[i] = 0;
       trackingObjectHue[i] = random8();
       trackingObjectState[i] = random8(4);//     B00           направление головы змейки
-                                           // B10     B11
-                                           //     B01
+                                          // B10     B11
+                                          //     B01
     }
     
   }
@@ -6680,7 +6681,7 @@ void LiquidLampRoutine(bool isColored){
   }
 }
 
-// ----------- Эфеект "Попкорн"
+// ----------- Эффект "Попкорн"
 // (C) Aaron Gotwalt (Soulmate)
 // https://editor.soulmatelights.com/gallery/117
 // переосмысление (c) SottNick
@@ -6820,54 +6821,30 @@ void drawPixelXYFseamless(float x, float y, CRGB color)
     drawPixelXY(xn, yn, clr);
   }
 }
-
+/*
 class oscillatingCell {
 public:
-  byte red;
-  byte blue;
-  byte green;
-  byte color;
+  byte red; // значения 0 или 1
+  byte blue; // значения 0 или 1
+  byte green; // значения 0 или 1
+  byte color; // значения от 0 до 2
 };
 oscillatingCell oscillatingWorld[WIDTH][HEIGHT];
 
-int redNeighbours(uint8_t x, uint8_t y) {
-  return (oscillatingWorld[(x + 1) % WIDTH][y].red) +
-         (oscillatingWorld[x][(y + 1) % HEIGHT].red) +
-         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][y].red) +
-         (oscillatingWorld[x][(y + HEIGHT - 1) % HEIGHT].red) +
-         (oscillatingWorld[(x + 1) % WIDTH][(y + 1) % HEIGHT].red) +
-         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + 1) % HEIGHT].red) +
-         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].red) +
-         (oscillatingWorld[(x + 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].red);
-    }
+будем использовать вместо них всех имеющийся в прошивке массив
+uint8_t noise3d[2][WIDTH][HEIGHT]; 
+*/
 
-int blueNeighbours(uint8_t x, uint8_t y) {
-  return (oscillatingWorld[(x + 1) % WIDTH][y].blue) +
-         (oscillatingWorld[x][(y + 1) % HEIGHT].blue) +
-         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][y].blue) +
-         (oscillatingWorld[x][(y + HEIGHT - 1) % HEIGHT].blue) +
-         (oscillatingWorld[(x + 1) % WIDTH][(y + 1) % HEIGHT].blue) +
-         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + 1) % HEIGHT].blue) +
-         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].blue) +
-         (oscillatingWorld[(x + 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].blue);
+uint8_t calcNeighbours(uint8_t x, uint8_t y, uint8_t n) {
+  return (noise3d[0][(x + 1) % WIDTH][y] == n) +
+         (noise3d[0][x][(y + 1) % HEIGHT] == n) +
+         (noise3d[0][(x + WIDTH - 1) % WIDTH][y] == n) +
+         (noise3d[0][x][(y + HEIGHT - 1) % HEIGHT] == n) +
+         (noise3d[0][(x + 1) % WIDTH][(y + 1) % HEIGHT] == n) +
+         (noise3d[0][(x + WIDTH - 1) % WIDTH][(y + 1) % HEIGHT] == n) +
+         (noise3d[0][(x + WIDTH - 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT] == n) +
+         (noise3d[0][(x + 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT] == n);
     }
-    
-int greenNeighbours(uint8_t x, uint8_t y) {
-  return (oscillatingWorld[(x + 1) % WIDTH][y].green) +
-         (oscillatingWorld[x][(y + 1) % HEIGHT].green) +
-         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][y].green) +
-         (oscillatingWorld[x][(y + HEIGHT - 1) % HEIGHT].green) +
-         (oscillatingWorld[(x + 1) % WIDTH][(y + 1) % HEIGHT].green) +
-         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + 1) % HEIGHT].green) +
-         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].green) +
-         (oscillatingWorld[(x + 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].green);
-    }
-
-void setCellColors(uint8_t x, uint8_t y) {
-  oscillatingWorld[x][y].red = (oscillatingWorld[x][y].color == 0U);
-  oscillatingWorld[x][y].green = (oscillatingWorld[x][y].color == 1U);
-  oscillatingWorld[x][y].blue = (oscillatingWorld[x][y].color == 2U);
-}
 
 void oscillatingRoutine() {
   if (loadingFlag) {
@@ -6899,8 +6876,8 @@ void oscillatingRoutine() {
     //случайное заполнение
     for (uint8_t i = 0; i < WIDTH; i++) {
       for (uint8_t j = 0; j < HEIGHT; j++) {
-        oscillatingWorld[i][j].color = random8(3);
-        setCellColors(i, j);
+        noise3d[1][i][j] = random8(3);
+        noise3d[0][i][j] = noise3d[1][i][j];
       }
     }
   }
@@ -6927,22 +6904,22 @@ void oscillatingRoutine() {
   uint16_t colorCount[3] = {0U, 0U, 0U};  
   for (uint8_t x = 0; x < WIDTH; x++) {
       for (uint8_t y = 0; y < HEIGHT; y++) {
-          if (oscillatingWorld[x][y].red){
+          if (noise3d[0][x][y] == 0U){
              colorCount[0U]++;
-             if (greenNeighbours(x, y) > 2U)
-                oscillatingWorld[x][y].color = 1U;
+             if (calcNeighbours(x, y, 1U) > 2U)
+                noise3d[1][x][y] = 1U;
           }
-          else if (oscillatingWorld[x][y].green){
+          else if (noise3d[0][x][y] == 1U){
              colorCount[1U]++;
-             if (blueNeighbours(x, y) > 2U)
-                oscillatingWorld[x][y].color = 2U;
+             if (calcNeighbours(x, y, 2U) > 2U)
+                noise3d[1][x][y] = 2U;
           }
-          else {//if (oscillatingWorld[x][y].blue){
+          else {//if (noise3d[0][x][y] == 2U){
              colorCount[2U]++;
-             if (redNeighbours(x, y) > 2U)
-                oscillatingWorld[x][y].color = 0U;
+             if (calcNeighbours(x, y, 0U) > 2U)
+                noise3d[1][x][y] = 0U;
           }
-          drawPixelXYFseamless((float)x + 0.5, (float)y + 0.5, currColors[oscillatingWorld[x][y].color]);
+          drawPixelXYFseamless((float)x + 0.5, (float)y + 0.5, currColors[noise3d[1][x][y]]);
       }
   }
 
@@ -6967,11 +6944,11 @@ void oscillatingRoutine() {
   if (hue == hue2){// чтобы не каждый ход
     hue2 += random8(220U) + 36U;
     uint8_t tx = random8(WIDTH);
-    deltaHue = oscillatingWorld[tx][0U].color + 1U;
+    deltaHue = noise3d[1][tx][0U] + 1U;
     if (deltaHue > 2U) deltaHue = 0U;
-    oscillatingWorld[tx][0U].color = deltaHue;
-    oscillatingWorld[(tx + 1U) % WIDTH][0U].color = deltaHue;
-    oscillatingWorld[(tx + 2U) % WIDTH][0U].color = deltaHue;
+    noise3d[1][tx][0U] = deltaHue;
+    noise3d[1][(tx + 1U) % WIDTH][0U] = deltaHue;
+    noise3d[1][(tx + 2U) % WIDTH][0U] = deltaHue;
   }
   
   deltaHue = colorCount[0];
@@ -6985,14 +6962,14 @@ void oscillatingRoutine() {
       uint8_t tx = random8(WIDTH);
       uint8_t ty = random8(HEIGHT);
       if (random8(2U)){
-        oscillatingWorld[tx][ty].color = c;
-        oscillatingWorld[(tx + 1U) % WIDTH][ty].color = c;
-        oscillatingWorld[(tx + 2U) % WIDTH][ty].color = c;
+        noise3d[1][tx][ty] = c;
+        noise3d[1][(tx + 1U) % WIDTH][ty] = c;
+        noise3d[1][(tx + 2U) % WIDTH][ty] = c;
       }
       else {
-        oscillatingWorld[tx][ty].color = c;
-        oscillatingWorld[tx][(ty + 1U) % HEIGHT].color = c;
-        oscillatingWorld[tx][(ty + 2U) % HEIGHT].color = c;
+        noise3d[1][tx][ty] = c;
+        noise3d[1][tx][(ty + 1U) % HEIGHT] = c;
+        noise3d[1][tx][(ty + 2U) % HEIGHT] = c;
       }
     }
   }
@@ -7000,11 +6977,10 @@ void oscillatingRoutine() {
   // перенос на следующий цикл
   for (uint8_t x = 0; x < WIDTH; x++) {
       for (uint8_t y = 0; y < HEIGHT; y++) {
-          setCellColors(x, y);
+          noise3d[0][x][y] = noise3d[1][x][y];
       }
   }
 }
-
 
 // ============= Огонь 2020 ===============
 // (c) SottNick
@@ -7294,7 +7270,8 @@ void smokeballsRoutine(){
     }
   }
   
-  dimAll(240);
+  //dimAll(240); фиксированное число - очень плохо, когда матрицы разной высоты // fadeToBlackBy(leds, NUM_LEDS, 10);
+  fadeToBlackBy(leds, NUM_LEDS, 128U / HEIGHT);
 if (modes[currentMode].Speed & 0x01)
   blurScreen(20);
   for (byte j = 0; j < enlargedObjectNUM; j++) {
@@ -8124,8 +8101,11 @@ void polarRoutine() {
     loadingFlag = false;
     //setCurrentPalette();
     //fillMyPal16_2((modes[currentMode].Scale - 1U) * 2.55);//, !(modes[currentMode].Scale & 0x01)); фиксированная палитра - для слабаков
+
+    //emitterX = fmap((float)HEIGHT, 8, 32, 28, 12); такое работало с горем пополам только для матриц до 32 пикселей в высоту
+    //emitterX = 512. / HEIGHT - 0.0001; // это максимально возможное значение
+    emitterX = 400. / HEIGHT; // а это - максимум без яркой засветки крайних рядов матрицы (сверху и снизу)
     
-    emitterX = fmap((float)HEIGHT, 8, 32, 28, 12);
     ff_y = map(WIDTH, 8, 64, 310, 63);
     //ff_z = map(modes[currentMode].Scale, 1, 100, 30, ff_y);
     ff_z = ff_y;
@@ -8356,3 +8336,213 @@ void magmaRoutine(){
     ff_z++;
   
 }
+
+/*
+// ============= Эффект Огонь 2021 ===============
+// (c) Андрей Локтев
+// https://goldenandy.blogspot.com/2021/05/ws2812.html
+// адаптация (с) SottNick
+
+// тип для искры.
+typedef struct {
+  uint8_t hue;
+  int16_t  x, dx; 
+  int16_t  y, dy;
+  uint16_t ttl;
+  uint8_t value;
+  uint8_t saturation;
+  } sparkleElementType;
+
+
+//  цвет и насыщенность, для вариантов эффектов
+typedef struct {
+  uint8_t start;
+  uint8_t gap;
+  uint8_t saturation;
+  uint8_t subSaturation;
+  } hueGapSatType;
+
+//  hue-saturation-value
+typedef struct {
+  uint8_t h;
+  uint8_t s;
+  uint8_t v;
+  } sHSVtype; 
+
+
+
+#define EFF_MULTIPLIER        256 // множитель для "дробных" вычислений. Должен быть степенью 2
+
+
+//***** Огонь на базе Sparkle Strings
+#define FLAME_MAX_COLS        (WIDTH)
+#define FLAME_POINTS        (FLAME_MAX_COLS)// число одновременных "искорок"
+#define FLAME_MIN_DY        (EFF_MULTIPLIER/2)
+#define FLAME_MAX_DY        EFF_MULTIPLIER  // не должен быть больше делителя, что б не было проскоков огня
+#define FLAME_MIN_DX        (-FLAME_MAX_DX)
+#define FLAME_MAX_DX        (EFF_MULTIPLIER/8) // +/-
+#define FLAME_MIN_TTL       10
+#define FLAME_MAX_TTL       22
+#define FLAME_MIN_VALUE       128
+#define FLAME_MAX_VALUE       255
+#define FLAME_VALUE_DECREASE    6
+#define FLAME_SIDELIGHTS      1  // yes/no
+#define FLAME_DELAY_MS        16 // пауза между кадрами
+// настройки пламени
+const static hueGapSatType flameStyles[6] = {
+      {.start = 254,  .gap =  20,   .saturation = 255 },
+      {.start = 43,   .gap =  92,   .saturation = 255 },
+      {.start = 107,  .gap =  64,   .saturation = 255 },
+      {.start = 156,  .gap =  43,   .saturation = 255 },
+      {.start = 192,  .gap =  64,   .saturation = 255 },
+      {.start = 0  ,  .gap =  0 ,   .saturation = 0   },
+  };
+
+static union {
+  struct {
+    uint16_t      delay;
+    uint8_t      brightLevel;
+    sHSVtype      hsvArr[WIDTH][HEIGHT];
+    sparkleElementType  flameArr[FLAME_POINTS];
+  } flame;
+} efData;
+
+
+//////////////////////////////////////////////////
+/////////////////////////// Strings flame routines
+//////////////////////////////////////////////////
+
+// leds - ссылка на линейный массив светодидодов
+// ticks - число миллисекунд, прошедшее с прошлого вызова процедуры. Если == 0 - инициализация
+// sett - ссылка на структуру с настройками
+
+void execStringsFlame(){//(sRGBtype leds[], uint16_t ticks, settingsType* sett){
+  uint8_t settFlameParamStyle = modes[currentMode].Scale % 6U; //sett->flameParam.style
+  uint16_t ticks = 256U - modes[currentMode].Speed;//15U;
+  enlargedObjectNUM = (modes[currentMode].Scale - 1U) / 99.0 * (FLAME_POINTS - 1U) + 1U;
+  //enlargedObjectNUM = (modes[currentMode].Scale - 1U) % 11U / 10.0 * (enlargedOBJECT_MAX_COUNT - 1U) + 1U;
+  if (enlargedObjectNUM > enlargedOBJECT_MAX_COUNT) enlargedObjectNUM = enlargedOBJECT_MAX_COUNT;
+  
+
+  int16_t i,j;
+  if (false && loadingFlag){ //if (!ticks) { // init
+    loadingFlag = false;  
+    for (i = 0; i < FLAME_POINTS; i++) {
+      efData.flame.flameArr[i].ttl = random8(FLAME_MAX_TTL);
+      efData.flame.flameArr[i].value = 0;
+      efData.flame.flameArr[i].x = 0;
+      efData.flame.flameArr[i].y = 0;
+      efData.flame.flameArr[i].dx = 0;
+      efData.flame.flameArr[i].dy = 0;
+      efData.flame.flameArr[i].hue = flameStyles[settFlameParamStyle].start;
+      efData.flame.flameArr[i].saturation = flameStyles[settFlameParamStyle].saturation;
+    }
+    for (i=0; i < WIDTH; i++)
+        for (j=0; j < FLAME_MAX_COLS; j++ ) {
+          efData.flame.hsvArr[i][j].h = flameStyles[settFlameParamStyle].start;
+          efData.flame.hsvArr[i][j].s = 255;
+          efData.flame.hsvArr[i][j].v = 0;
+        }
+    efData.flame.brightLevel = 0;
+    efData.flame.delay = 0;
+  } // if isReset
+
+  if (efData.flame.delay>=ticks) efData.flame.delay -= ticks; else efData.flame.delay = 0;
+  if (efData.flame.delay) return;
+  efData.flame.delay = FLAME_DELAY_MS-1;
+
+  uint16_t targetBright = 255U;//sett->brightness; //  яркость, плавное изменение
+  if (efData.flame.brightLevel < targetBright) efData.flame.brightLevel++;
+  if (efData.flame.brightLevel > targetBright) efData.flame.brightLevel--;
+
+  // угасание поля
+  for (i=0; i < FLAME_MAX_COLS; i++)
+      for (j=0; j < HEIGHT; j++ ) {
+        if (efData.flame.hsvArr[i][j].v>FLAME_VALUE_DECREASE) efData.flame.hsvArr[i][j].v -= FLAME_VALUE_DECREASE;
+        else efData.flame.hsvArr[i][j].v = 0;
+      }
+
+  // цикл перебора искр
+  for (i=0; i < enlargedObjectNUM; i++) {
+    if (efData.flame.flameArr[i].ttl) {
+      // out sparkle
+      int8_t mx = efData.flame.flameArr[i].x / EFF_MULTIPLIER;
+      int8_t my = efData.flame.flameArr[i].y / EFF_MULTIPLIER;
+if (modes[currentMode].Speed & 0x01 || 
+(my == 0U 
+|| efData.flame.flameArr[i].value <= efData.flame.hsvArr[mx][my-1U].v + FLAME_VALUE_DECREASE + 1
+|| efData.flame.flameArr[i].value <= efData.flame.hsvArr[mx==0?WIDTH-1:mx-1][my-1U].v + FLAME_VALUE_DECREASE + 1
+|| efData.flame.flameArr[i].value <= efData.flame.hsvArr[mx==WIDTH-1?0:mx+1][my-1U].v + FLAME_VALUE_DECREASE + 1
+)){ // (c) SottNick - чиним затирание старых ярких искорок новыми тусклыми
+      
+      if (modes[currentMode].Speed & 0x01 || efData.flame.flameArr[i].value >= efData.flame.hsvArr[mx][my].v) // (c) SottNick - чиним затирание старых ярких искорок новыми тусклыми
+      {
+        efData.flame.hsvArr[mx][my].h = efData.flame.flameArr[i].hue;
+        efData.flame.hsvArr[mx][my].s = efData.flame.flameArr[i].saturation;
+        efData.flame.hsvArr[mx][my].v = efData.flame.flameArr[i].value;
+      }
+#if defined(FLAME_SIDELIGHTS)  && FLAME_SIDELIGHTS
+      // размытие влево/право
+      // left-right : left
+      mx--;
+      if (mx < 0) mx += FLAME_MAX_COLS;
+      if (efData.flame.flameArr[i].value > efData.flame.hsvArr[mx][my].v/2) {
+        efData.flame.hsvArr[mx][my].h = efData.flame.flameArr[i].hue;
+        efData.flame.hsvArr[mx][my].v = efData.flame.flameArr[i].value / 2;
+        efData.flame.hsvArr[mx][my].s = efData.flame.flameArr[i].saturation;
+      }
+      // left-right : right
+      mx += 2;
+      if (mx > FLAME_MAX_COLS-1) mx -= FLAME_MAX_COLS;
+      if (efData.flame.flameArr[i].value > efData.flame.hsvArr[mx][my].v/2) {
+        efData.flame.hsvArr[mx][my].h = efData.flame.flameArr[i].hue;
+        efData.flame.hsvArr[mx][my].v = efData.flame.flameArr[i].value / 2;
+        efData.flame.hsvArr[mx][my].s = efData.flame.flameArr[i].saturation;
+      }
+#endif
+}
+      // step
+      j = efData.flame.flameArr[i].ttl;
+      efData.flame.flameArr[i].ttl--;
+      efData.flame.flameArr[i].value = (efData.flame.flameArr[i].ttl * efData.flame.flameArr[i].value + j / 2) / j;
+      //if (!efData.flame.flameArr[i].value) efData.flame.flameArr[i].ttl = 0;
+      if (efData.flame.flameArr[i].value<2) efData.flame.flameArr[i].ttl = 0; // (c) SottNick - чиним затирание старых ярких искорок новыми тусклыми
+      efData.flame.flameArr[i].x += efData.flame.flameArr[i].dx;
+      efData.flame.flameArr[i].y += efData.flame.flameArr[i].dy;
+      // если вышли за верхнюю границу - то конец искорке.
+      if (efData.flame.flameArr[i].y > HEIGHT*EFF_MULTIPLIER-1) {
+        efData.flame.flameArr[i].ttl = 0;
+      }
+      // если искорка вылезла влево или вправо - перекинем ее на другую сторону
+      if (efData.flame.flameArr[i].x < 0) {
+        efData.flame.flameArr[i].x += FLAME_MAX_COLS*EFF_MULTIPLIER;
+      } else if (efData.flame.flameArr[i].x > FLAME_MAX_COLS*EFF_MULTIPLIER-1) {
+        efData.flame.flameArr[i].x -= FLAME_MAX_COLS*EFF_MULTIPLIER;
+      }
+    // end of "if (flameArr[i].ttl)"
+    } else {
+      // new sparkle point
+      efData.flame.flameArr[i].ttl = random8(FLAME_MAX_TTL-FLAME_MIN_TTL)+FLAME_MIN_TTL;
+      j = flameStyles[settFlameParamStyle].gap;
+      if (j<0) j = 0;
+      efData.flame.flameArr[i].hue = flameStyles[settFlameParamStyle].start + random8(j);
+      efData.flame.flameArr[i].x = random8(FLAME_MAX_COLS)*256;
+      efData.flame.flameArr[i].y = 0;
+      efData.flame.flameArr[i].dx = 0;//FLAME_MIN_DX + random8(FLAME_MAX_DX-FLAME_MIN_DX);
+      efData.flame.flameArr[i].dy = FLAME_MIN_DY + random8(FLAME_MAX_DY-FLAME_MIN_DY);
+      efData.flame.flameArr[i].value = FLAME_MIN_VALUE+random8(FLAME_MAX_VALUE - FLAME_MIN_VALUE);
+      efData.flame.flameArr[i].saturation = flameStyles[settFlameParamStyle].saturation;
+    } // else
+  } //for i
+  
+  // output data to LED array
+  for (i=0; i<WIDTH; i++)
+    for (j=0; j<HEIGHT; j++) {
+      uint16_t idx = XY(i,j);
+      hsv2rgb_spectrum(CHSV(efData.flame.hsvArr[i][j].h,
+          efData.flame.hsvArr[i][j].s,
+          efData.flame.brightLevel * efData.flame.hsvArr[i][j].v / 255),
+          leds[idx]);
+    } // for j
+}
+*/
