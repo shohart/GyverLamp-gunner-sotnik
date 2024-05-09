@@ -1,5 +1,24 @@
 // ============= ЭФФЕКТЫ ===============
 
+// палитра для типа реалистичного водопада (если ползунок Масштаб выставить на 100)
+extern const TProgmemRGBPalette16 WaterfallColors_p FL_PROGMEM = {
+  0x000000, 0x060707, 0x101110, 0x151717,
+  0x1C1D22, 0x242A28, 0x363B3A, 0x313634,
+  0x505552, 0x6B6C70, 0x98A4A1, 0xC1C2C1,
+  0xCACECF, 0xCDDEDD, 0xDEDFE0, 0xB2BAB9
+};
+
+// стандартные функции библиотеки LEDraw от @Palpalych (для адаптаций его эффектов)
+void blurScreen(fract8 blur_amount, CRGB *LEDarray = leds)
+{
+  blur2d(LEDarray, WIDTH, HEIGHT, blur_amount);
+}
+
+// добавлено изменение текущей палитры (используется во многих эффектах ниже для бегунка Масштаб)
+const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
+const TProgmemRGBPalette16 *curPalette = palette_arr[0];
+
+
 // ------------- конфетти --------------
 #define FADE_OUT_SPEED        (70U)                         // скорость затухания
 void sparklesRoutine()
@@ -62,14 +81,6 @@ void fadePixel(uint8_t i, uint8_t j, uint8_t step)          // новый фей
 #define SPARKINGNEW 80 // 30 // 120 // 90 // 60
 // 80 почти все белые струи сверху будут долетать до низа - хорошо при выбранном ползунке Масштаб = 100 (белая вода без подкрашивания)
 // 50 чуть больше половины будет долетать. для цветных вариантов жидкости так более эффектно
-
-// палитра для типа реалистичного водопада (если ползунок Масштаб выставить на 100)
-extern const TProgmemRGBPalette16 WaterfallColors_p FL_PROGMEM = {
-  0x000000, 0x060707, 0x101110, 0x151717,
-  0x1C1D22, 0x242A28, 0x363B3A, 0x313634,
-  0x505552, 0x6B6C70, 0x98A4A1, 0xC1C2C1,
-  0xCACECF, 0xCDDEDD, 0xDEDFE0, 0xB2BAB9
-};
 
 void fire2012WithPalette() {
   //    bool fire_water = modes[currentMode].Scale <= 50;
@@ -147,7 +158,6 @@ static const uint8_t hueMask[8][16] PROGMEM =
   {1 , 0 , 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 0 , 0 , 0 , 0 , 1  }
 };
 
-//void fireRoutine(char *isColored) // <- ******* для прошивки Gunner47 + kDn mod ******* (раскомментить/закоментить) C - цветной огонь, остальное - белый
 void fireRoutine(bool isColored) // <- ******* для оригинальной прошивки Gunner47 ******* (раскомментить/закоментить)
 {
   if (loadingFlag) {
@@ -2266,6 +2276,7 @@ void BBallsRoutine(bool isColored)
   }
   bballsLoop(isColored);
 }
+
 // --------------------------- эффект спирали ----------------------
 /*
  * Aurora: https://github.com/pixelmatix/aurora
@@ -2275,10 +2286,11 @@ void BBallsRoutine(bool isColored)
  */
     byte spirotheta1 = 0;
     byte spirotheta2 = 0;
-    byte spirohueoffset = 0;
+//    byte spirohueoffset = 0; // будем использовать переменную сдвига оттенка hue из эффектов Радуга
+    
 
-    const uint8_t spiroradiusx = WIDTH / 4;
-    const uint8_t spiroradiusy = HEIGHT / 4;
+    const uint8_t spiroradiusx = WIDTH / 4 - 1;
+    const uint8_t spiroradiusy = HEIGHT / 4 - 1;
     
     const uint8_t spirocenterX = WIDTH / 2;
     const uint8_t spirocenterY = HEIGHT / 2;
@@ -2311,7 +2323,16 @@ uint8_t mapcos8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255) {
 }
   
 void spiroRoutine() {
-      dimAll(250);
+    if (loadingFlag)
+    {
+      loadingFlag = false;
+      if (modes[currentMode].Scale > 100) modes[currentMode].Scale = 100; // чтобы не было проблем при прошивке без очистки памяти
+      // добавлено изменение палитры бегунком Масштаб
+      curPalette = palette_arr[(int)((float)modes[currentMode].Scale/100*((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1U))];
+    }
+      
+      blurScreen(20); // @Palpalych советует делать размытие
+      dimAll(255U - modes[currentMode].Speed / 10);
 
       boolean change = false;
       
@@ -2322,10 +2343,12 @@ void spiroRoutine() {
         uint8_t x2 = mapsin8(spirotheta2 + i * spirooffset, x - spiroradiusx, x + spiroradiusx);
         uint8_t y2 = mapcos8(spirotheta2 + i * spirooffset, y - spiroradiusy, y + spiroradiusy);
 
-        CRGB color = ColorFromPalette( PartyColors_p, (spirohueoffset + i * spirooffset), 128U); // вообще-то палитра должна постоянно меняться, но до адаптации этого руки уже не дошли
 
+       //CRGB color = ColorFromPalette( PartyColors_p, (hue + i * spirooffset), 128U); // вообще-то палитра должна постоянно меняться, но до адаптации этого руки уже не дошли
+       //CRGB color = ColorFromPalette(*curPalette, hue + i * spirooffset, 128U); // вот так уже прикручена к бегунку Масштаба. за
+       //leds[getPixelNumber(x2, y2)] += color;
 if (x2<WIDTH && y2<HEIGHT) // добавил проверки. не знаю, почему эффект подвисает без них
-        leds[getPixelNumber(x2, y2)] += color;
+        leds[getPixelNumber(x2, y2)] += (CRGB)ColorFromPalette(*curPalette, hue + i * spirooffset);
         
         if((x2 == spirocenterX && y2 == spirocenterY) ||
            (x2 == spirocenterX && y2 == spirocenterY)) change = true;
@@ -2363,7 +2386,7 @@ if (x2<WIDTH && y2<HEIGHT) // добавил проверки. не знаю, п
       }
 
       EVERY_N_MILLIS(33) {
-        spirohueoffset += 1;
+        hue += 1;
       }
 }
 
@@ -2564,6 +2587,37 @@ void RainRoutine()
   }
 }
 
+// ============= ЭФФЕКТ ПРИЗМАТА ===============
+// Prismata Loading Animation
+// https://github.com/pixelmatix/aurora/blob/master/PatternPendulumWave.h
+// Адаптация от (c) SottNick
+
+void PrismataRoutine() {
+    if (loadingFlag)
+    {
+      loadingFlag = false;
+      if (modes[currentMode].Scale > 100) modes[currentMode].Scale = 100; // чтобы не было проблем при прошивке без очистки памяти
+      curPalette = palette_arr[(int)((float)modes[currentMode].Scale/100 * ((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1U))];
+    } 
+  
+  EVERY_N_MILLIS(33) {
+    hue++; // используем переменную сдвига оттенка из функций радуги, чтобы не занимать память
+  }
+  blurScreen(20); // @Palpalych посоветовал делать размытие
+//  dimAll(255U - modes[currentMode].Scale * 2.55);
+  dimAll(255U - modes[currentMode].Scale % 11U);
+
+
+  for (int x = 0; x < WIDTH; x++)
+  {
+//    uint8_t y = beatsin8(x + 1, 0, HEIGHT-1); // это я попытался распотрошить данную функцию до исходного кода и вставить в неё регулятор скорости
+    uint8_t beat = (GET_MILLIS() * (accum88(x + 1) << 8) * 28 * modes[currentMode].Speed) >> 24; // вместо 28 в оригинале было 280, а умножения на .Speed не было
+    uint8_t y = scale8(sin8(beat), HEIGHT-1);
+//    и получилось!!!
+    drawPixelXY(x, y, ColorFromPalette(*curPalette, x * 7 + hue));
+  }
+}
+
 // ============= ЭФФЕКТ БЕГУЩАЯ СТРОКА ===============
 void text_running() {
     while (!fillString(TextTicker, CHSV(modes[EFF_TEXT].Scale * 2.55, 255U, 255U), true) && currentMode == EFF_TEXT) {
@@ -2575,4 +2629,629 @@ void text_running() {
       }
       #endif
     }
+}
+
+// ============= ЭФФЕКТ СТАЯ ===============
+// https://github.com/pixelmatix/aurora/blob/master/PatternFlock.h
+// Адаптация от (c) SottNick и @kDn
+
+template <class T>
+class Vector2 {
+public:
+    T x, y;
+
+    Vector2() :x(0), y(0) {}
+    Vector2(T x, T y) : x(x), y(y) {}
+    Vector2(const Vector2& v) : x(v.x), y(v.y) {}
+
+    Vector2& operator=(const Vector2& v) {
+        x = v.x;
+        y = v.y;
+        return *this;
+    }
+    
+    bool isEmpty() {
+        return x == 0 && y == 0;
+    }
+
+    bool operator==(Vector2& v) {
+        return x == v.x && y == v.y;
+    }
+
+    bool operator!=(Vector2& v) {
+        return !(x == y);
+    }
+
+    Vector2 operator+(Vector2& v) {
+        return Vector2(x + v.x, y + v.y);
+    }
+    Vector2 operator-(Vector2& v) {
+        return Vector2(x - v.x, y - v.y);
+    }
+
+    Vector2& operator+=(Vector2& v) {
+        x += v.x;
+        y += v.y;
+        return *this;
+    }
+    Vector2& operator-=(Vector2& v) {
+        x -= v.x;
+        y -= v.y;
+        return *this;
+    }
+
+    Vector2 operator+(double s) {
+        return Vector2(x + s, y + s);
+    }
+    Vector2 operator-(double s) {
+        return Vector2(x - s, y - s);
+    }
+    Vector2 operator*(double s) {
+        return Vector2(x * s, y * s);
+    }
+    Vector2 operator/(double s) {
+        return Vector2(x / s, y / s);
+    }
+    
+    Vector2& operator+=(double s) {
+        x += s;
+        y += s;
+        return *this;
+    }
+    Vector2& operator-=(double s) {
+        x -= s;
+        y -= s;
+        return *this;
+    }
+    Vector2& operator*=(double s) {
+        x *= s;
+        y *= s;
+        return *this;
+    }
+    Vector2& operator/=(double s) {
+        x /= s;
+        y /= s;
+        return *this;
+    }
+
+    void set(T x, T y) {
+        this->x = x;
+        this->y = y;
+    }
+
+    void rotate(double deg) {
+        double theta = deg / 180.0 * M_PI;
+        double c = cos(theta);
+        double s = sin(theta);
+        double tx = x * c - y * s;
+        double ty = x * s + y * c;
+        x = tx;
+        y = ty;
+    }
+
+    Vector2& normalize() {
+        if (length() == 0) return *this;
+        *this *= (1.0 / length());
+        return *this;
+    }
+
+    float dist(Vector2 v) const {
+        Vector2 d(v.x - x, v.y - y);
+        return d.length();
+    }
+    float length() const {
+        return sqrt(x * x + y * y);
+    }
+
+    float mag() const {
+        return length();
+    }
+
+    float magSq() {
+        return (x * x + y * y);
+    }
+
+    void truncate(double length) {
+        double angle = atan2f(y, x);
+        x = length * cos(angle);
+        y = length * sin(angle);
+    }
+
+    Vector2 ortho() const {
+        return Vector2(y, -x);
+    }
+
+    static float dot(Vector2 v1, Vector2 v2) {
+        return v1.x * v2.x + v1.y * v2.y;
+    }
+    static float cross(Vector2 v1, Vector2 v2) {
+        return (v1.x * v2.y) - (v1.y * v2.x);
+    }
+
+    void limit(float max) {
+        if (magSq() > max*max) {
+            normalize();
+            *this *= max;
+        }
+    }
+};
+
+typedef Vector2<float> PVector;
+
+// Flocking
+// Daniel Shiffman <http://www.shiffman.net>
+// The Nature of Code, Spring 2009
+
+// Boid class
+// Methods for Separation, Cohesion, Alignment added
+
+class Boid {
+  public:
+
+    PVector location;
+    PVector velocity;
+    PVector acceleration;
+    float maxforce;    // Maximum steering force
+    float maxspeed;    // Maximum speed
+
+    float desiredseparation = 4;
+    float neighbordist = 8;
+    byte colorIndex = 0;
+    float mass;
+
+    boolean enabled = true;
+
+    Boid() {}
+
+    Boid(float x, float y) {
+      acceleration = PVector(0, 0);
+      velocity = PVector(randomf(), randomf());
+      location = PVector(x, y);
+      maxspeed = 1.5;
+      maxforce = 0.05;
+    }
+
+    static float randomf() {
+      return mapfloat(random(0, 255), 0, 255, -.5, .5);
+    }
+
+    static float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
+      return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    }
+
+    void run(Boid boids [], uint8_t boidCount) {
+      flock(boids, boidCount);
+      update();
+      // wrapAroundBorders();
+      // render();
+    }
+
+    // Method to update location
+    void update() {
+      // Update velocity
+      velocity += acceleration;
+      // Limit speed
+      velocity.limit(maxspeed);
+      location += velocity;
+      // Reset acceleration to 0 each cycle
+      acceleration *= 0;
+    }
+
+    void applyForce(PVector force) {
+      // We could add mass here if we want A = F / M
+      acceleration += force;
+    }
+
+    void repelForce(PVector obstacle, float radius) {
+      //Force that drives boid away from obstacle.
+
+      PVector futPos = location + velocity; //Calculate future position for more effective behavior.
+      PVector dist = obstacle - futPos;
+      float d = dist.mag();
+
+      if (d <= radius) {
+        PVector repelVec = location - obstacle;
+        repelVec.normalize();
+        if (d != 0) { //Don't divide by zero.
+          // float scale = 1.0 / d; //The closer to the obstacle, the stronger the force.
+          repelVec.normalize();
+          repelVec *= (maxforce * 7);
+          if (repelVec.mag() < 0) { //Don't let the boids turn around to avoid the obstacle.
+            repelVec.y = 0;
+          }
+        }
+        applyForce(repelVec);
+      }
+    }
+
+    // We accumulate a new acceleration each time based on three rules
+    void flock(Boid boids [], uint8_t boidCount) {
+      PVector sep = separate(boids, boidCount);   // Separation
+      PVector ali = align(boids, boidCount);      // Alignment
+      PVector coh = cohesion(boids, boidCount);   // Cohesion
+      // Arbitrarily weight these forces
+      sep *= 1.5;
+      ali *= 1.0;
+      coh *= 1.0;
+      // Add the force vectors to acceleration
+      applyForce(sep);
+      applyForce(ali);
+      applyForce(coh);
+    }
+
+    // Separation
+    // Method checks for nearby boids and steers away
+    PVector separate(Boid boids [], uint8_t boidCount) {
+      PVector steer = PVector(0, 0);
+      int count = 0;
+      // For every boid in the system, check if it's too close
+      for (int i = 0; i < boidCount; i++) {
+        Boid other = boids[i];
+        if (!other.enabled)
+          continue;
+        float d = location.dist(other.location);
+        // If the distance is greater than 0 and less than an arbitrary amount (0 when you are yourself)
+        if ((d > 0) && (d < desiredseparation)) {
+          // Calculate vector pointing away from neighbor
+          PVector diff = location - other.location;
+          diff.normalize();
+          diff /= d;        // Weight by distance
+          steer += diff;
+          count++;            // Keep track of how many
+        }
+      }
+      // Average -- divide by how many
+      if (count > 0) {
+        steer /= (float) count;
+      }
+
+      // As long as the vector is greater than 0
+      if (steer.mag() > 0) {
+        // Implement Reynolds: Steering = Desired - Velocity
+        steer.normalize();
+        steer *= maxspeed;
+        steer -= velocity;
+        steer.limit(maxforce);
+      }
+      return steer;
+    }
+
+    // Alignment
+    // For every nearby boid in the system, calculate the average velocity
+    PVector align(Boid boids [], uint8_t boidCount) {
+      PVector sum = PVector(0, 0);
+      int count = 0;
+      for (int i = 0; i < boidCount; i++) {
+        Boid other = boids[i];
+        if (!other.enabled)
+          continue;
+        float d = location.dist(other.location);
+        if ((d > 0) && (d < neighbordist)) {
+          sum += other.velocity;
+          count++;
+        }
+      }
+      if (count > 0) {
+        sum /= (float) count;
+        sum.normalize();
+        sum *= maxspeed;
+        PVector steer = sum - velocity;
+        steer.limit(maxforce);
+        return steer;
+      }
+      else {
+        return PVector(0, 0);
+      }
+    }
+
+    // Cohesion
+    // For the average location (i.e. center) of all nearby boids, calculate steering vector towards that location
+    PVector cohesion(Boid boids [], uint8_t boidCount) {
+      PVector sum = PVector(0, 0);   // Start with empty vector to accumulate all locations
+      int count = 0;
+      for (int i = 0; i < boidCount; i++) {
+        Boid other = boids[i];
+        if (!other.enabled)
+          continue;
+        float d = location.dist(other.location);
+        if ((d > 0) && (d < neighbordist)) {
+          sum += other.location; // Add location
+          count++;
+        }
+      }
+      if (count > 0) {
+        sum /= count;
+        return seek(sum);  // Steer towards the location
+      }
+      else {
+        return PVector(0, 0);
+      }
+    }
+
+    // A method that calculates and applies a steering force towards a target
+    // STEER = DESIRED MINUS VELOCITY
+    PVector seek(PVector target) {
+      PVector desired = target - location;  // A vector pointing from the location to the target
+      // Normalize desired and scale to maximum speed
+      desired.normalize();
+      desired *= maxspeed;
+      // Steering = Desired minus Velocity
+      PVector steer = desired - velocity;
+      steer.limit(maxforce);  // Limit to maximum steering force
+      return steer;
+    }
+
+    // A method that calculates a steering force towards a target
+    // STEER = DESIRED MINUS VELOCITY
+    void arrive(PVector target) {
+      PVector desired = target - location;  // A vector pointing from the location to the target
+      float d = desired.mag();
+      // Normalize desired and scale with arbitrary damping within 100 pixels
+      desired.normalize();
+      if (d < 4) {
+        float m = map(d, 0, 100, 0, maxspeed);
+        desired *= m;
+      }
+      else {
+        desired *= maxspeed;
+      }
+
+      // Steering = Desired minus Velocity
+      PVector steer = desired - velocity;
+      steer.limit(maxforce);  // Limit to maximum steering force
+      applyForce(steer);
+      //Serial.println(d);
+    }
+
+    void wrapAroundBorders() {
+      if (location.x < 0) location.x = WIDTH - 1;
+      if (location.y < 0) location.y = HEIGHT - 1;
+      if (location.x >= WIDTH) location.x = 0;
+      if (location.y >= HEIGHT) location.y = 0;
+    }
+
+    void avoidBorders() {
+      PVector desired = velocity;
+
+      if (location.x < 8) desired = PVector(maxspeed, velocity.y);
+      if (location.x >= WIDTH - 8) desired = PVector(-maxspeed, velocity.y);
+      if (location.y < 8) desired = PVector(velocity.x, maxspeed);
+      if (location.y >= HEIGHT - 8) desired = PVector(velocity.x, -maxspeed);
+
+      if (desired != velocity) {
+        PVector steer = desired - velocity;
+        steer.limit(maxforce);
+        applyForce(steer);
+      }
+
+      if (location.x < 0) location.x = 0;
+      if (location.y < 0) location.y = 0;
+      if (location.x >= WIDTH) location.x = WIDTH - 1;
+      if (location.y >= HEIGHT) location.y = HEIGHT - 1;
+    }
+
+    bool bounceOffBorders(float bounce) {
+      bool bounced = false;
+
+      if (location.x >= WIDTH) {
+        location.x = WIDTH - 1;
+        velocity.x *= -bounce;
+        bounced = true;
+      }
+      else if (location.x < 0) {
+        location.x = 0;
+        velocity.x *= -bounce;
+        bounced = true;
+      }
+
+      if (location.y >= HEIGHT) {
+        location.y = HEIGHT - 1;
+        velocity.y *= -bounce;
+        bounced = true;
+      }
+      else if (location.y < 0) {
+        location.y = 0;
+        velocity.y *= -bounce;
+        bounced = true;
+      }
+
+      return bounced;
+    }
+
+    void render() {
+      // // Draw a triangle rotated in the direction of velocity
+      // float theta = velocity.heading2D() + radians(90);
+      // fill(175);
+      // stroke(0);
+      // pushMatrix();
+      // translate(location.x,location.y);
+      // rotate(theta);
+      // beginShape(TRIANGLES);
+      // vertex(0, -r*2);
+      // vertex(-r, r*2);
+      // vertex(r, r*2);
+      // endShape();
+      // popMatrix();
+      // backgroundLayer.drawPixel(location.x, location.y, CRGB::Blue);
+    }
+};
+
+static const uint8_t AVAILABLE_BOID_COUNT = 20;
+Boid boids[AVAILABLE_BOID_COUNT]; 
+
+    static const int boidCount = 10;
+    Boid predator;
+
+    PVector wind;
+//    byte hue = 0; будем использовать сдвиг от эффектов Радуга
+    bool predatorPresent = true;
+
+void flockRoutine(bool predatorIs) {
+    if (loadingFlag)
+    {
+      loadingFlag = false;
+
+      if (modes[currentMode].Scale > 100) modes[currentMode].Scale = 100; // чтобы не было проблем при прошивке без очистки памяти
+      curPalette = palette_arr[(int)((float)modes[currentMode].Scale/100 * ((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1U))];
+
+      for (int i = 0; i < boidCount; i++) {
+        boids[i] = Boid(15, 15);
+        boids[i].maxspeed = 0.380 * modes[currentMode].Speed /127.0+0.380/2;
+        boids[i].maxforce = 0.015 * modes[currentMode].Speed /127.0+0.015/2;
+      }
+      predatorPresent = predatorIs && random(0, 2) >= 1;
+      if (predatorPresent) {
+        predator = Boid(31, 31);
+        predator.maxspeed = 0.385 * modes[currentMode].Speed /127.0+0.385/2;
+        predator.maxforce = 0.020 * modes[currentMode].Speed /127.0+0.020/2;
+        predator.neighbordist = 8.0; // было 16.0 и хищник гонял по одной линии всегда
+        predator.desiredseparation = 0.0;
+      }
+    }
+    
+      blurScreen(15); // @Palpalych советует делать размытие
+      //myLamp.dimAll(254U - (31-(myLamp.effects.getScale()%32))*8);
+      dimAll(255U - (modes[currentMode].Scale % 11U) * 3);
+
+      bool applyWind = random(0, 255) > 240;
+      if (applyWind) {
+        wind.x = Boid::randomf() * .015 * modes[currentMode].Speed /127.0 + .015/2;
+        wind.y = Boid::randomf() * .015 * modes[currentMode].Speed /127.0 + .015/2;
+      }
+
+      CRGB color = ColorFromPalette(*curPalette, hue);
+      
+
+      for (int i = 0; i < boidCount; i++) {
+        Boid * boid = &boids[i];
+
+        if (predatorPresent) {
+          // flee from predator
+          boid->repelForce(predator.location, 10);
+        }
+
+        boid->run(boids, boidCount);
+        boid->wrapAroundBorders();
+        PVector location = boid->location;
+        // PVector velocity = boid->velocity;
+        // backgroundLayer.drawLine(location.x, location.y, location.x - velocity.x, location.y - velocity.y, color);
+        // effects.leds[XY(location.x, location.y)] += color;
+        drawPixelXY(location.x, location.y, color);
+
+        if (applyWind) {
+          boid->applyForce(wind);
+          applyWind = false;
+        }
+      }
+
+      if (predatorPresent) {
+        predator.run(boids, boidCount);
+        predator.wrapAroundBorders();
+        color = ColorFromPalette(*curPalette, hue + 128);
+        PVector location = predator.location;
+        // PVector velocity = predator.velocity;
+        // backgroundLayer.drawLine(location.x, location.y, location.x - velocity.x, location.y - velocity.y, color);
+        // effects.leds[XY(location.x, location.y)] += color;        
+        drawPixelXY(location.x, location.y, color);
+      }
+
+      EVERY_N_MILLIS(333) {
+        hue++;
+      }
+      
+      EVERY_N_SECONDS(30) {
+        predatorPresent = predatorIs && !predatorPresent;
+      }
+}
+// ============= ЭФФЕКТ ВОЛНЫ ===============
+// https://github.com/pixelmatix/aurora/blob/master/PatternWave.h
+// Адаптация от (c) SottNick
+
+    byte waveThetaUpdate = 0;
+    byte waveThetaUpdateFrequency = 0;
+    byte waveTheta = 0;
+
+    byte hueUpdate = 0;
+    byte hueUpdateFrequency = 0;
+//    byte hue = 0; будем использовать сдвиг от эффектов Радуга
+
+    byte waveRotation = 0;
+    uint8_t waveScale = 256 / WIDTH;
+    uint8_t waveCount = 1;
+
+void WaveRoutine() {
+    if (loadingFlag)
+    {
+      loadingFlag = false;
+      if (modes[currentMode].Scale > 100) modes[currentMode].Scale = 100; // чтобы не было проблем при прошивке без очистки памяти
+      curPalette = palette_arr[(int)((float)((modes[currentMode].Scale-1)%25)/25 * ((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1U))];
+     
+      //waveRotation = random(0, 4);// теперь вместо этого регулятор Масштаб
+      waveRotation = (modes[currentMode].Scale - 1) / 25U;
+      //waveCount = random(1, 3);// теперь вместо этого чётное/нечётное у регулятора Скорость
+      waveCount = modes[currentMode].Speed % 2;
+      //waveThetaUpdateFrequency = random(1, 2);
+      //hueUpdateFrequency = random(1, 6);      
+    }
+ 
+        dimAll(254);
+  
+        int n = 0;
+
+        switch (waveRotation) {
+            case 0:
+                for (int x = 0; x < WIDTH; x++) {
+                    n = quadwave8(x * 2 + waveTheta) / waveScale;
+                    drawPixelXY(x, n, ColorFromPalette(*curPalette, hue + x));
+                    if (waveCount != 1)
+                        drawPixelXY(x, HEIGHT - 1 - n, ColorFromPalette(*curPalette, hue + x));
+                }
+                break;
+
+            case 1:
+                for (int y = 0; y < HEIGHT; y++) {
+                    n = quadwave8(y * 2 + waveTheta) / waveScale;
+                    drawPixelXY(n, y, ColorFromPalette(*curPalette, hue + y));
+                    if (waveCount != 1)
+                        drawPixelXY(WIDTH - 1 - n, y, ColorFromPalette(*curPalette, hue + y));
+                }
+                break;
+
+            case 2:
+                for (int x = 0; x < WIDTH; x++) {
+                    n = quadwave8(x * 2 - waveTheta) / waveScale;
+                    drawPixelXY(x, n, ColorFromPalette(*curPalette, hue + x));
+                    if (waveCount != 1)
+                        drawPixelXY(x, HEIGHT - 1 - n, ColorFromPalette(*curPalette, hue + x));
+                }
+                break;
+
+            case 3:
+                for (int y = 0; y < HEIGHT; y++) {
+                    n = quadwave8(y * 2 - waveTheta) / waveScale;
+                    drawPixelXY(n, y, ColorFromPalette(*curPalette, hue + y));
+                    if (waveCount != 1)
+                        drawPixelXY(WIDTH - 1 - n, y, ColorFromPalette(*curPalette, hue + y));
+                }
+                break;
+        }
+
+
+        if (waveThetaUpdate >= waveThetaUpdateFrequency) {
+            waveThetaUpdate = 0;
+            waveTheta++;
+        }
+        else {
+            waveThetaUpdate++;
+        }
+
+        if (hueUpdate >= hueUpdateFrequency) {
+            hueUpdate = 0;
+            hue++;
+        }
+        else {
+            hueUpdate++;
+        }
+        
+        blurScreen(20); // @Palpalych советует делать размытие. вот в этом эффекте его явно не хватает...
 }
