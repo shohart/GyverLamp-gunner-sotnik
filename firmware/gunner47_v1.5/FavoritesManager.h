@@ -83,7 +83,7 @@ class FavoritesManager
       uint8_t* currentMode,
       bool* loadingFlag
       //#ifdef USE_NTP
-      #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
+      #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
       , bool* dawnFlag
       #endif
     )
@@ -91,7 +91,7 @@ class FavoritesManager
       if (FavoritesRunning == 0 ||
           !*ONflag                                          // лампа не переключается на следующий эффект при выключенной матрице
           //#ifdef USE_NTP
-          #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
+          #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
           || *dawnFlag                                      // лампа не переключается на следующий эффект при включенном будильнике
           #endif
       )

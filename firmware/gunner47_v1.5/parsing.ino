@@ -48,13 +48,30 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
 
     if (!strncmp_P(inputBuffer, PSTR("GET"), 3))
     {
+      #ifdef GET_TIME_FROM_PHONE
+      if (!timeSynched || !(ntpServerAddressResolved && espMode == 1U) && manualTimeShift + millis() / 1000UL > phoneTimeLastSync + GET_TIME_FROM_PHONE * 60U)
+      {// если прошло более 5 минут (GET_TIME_FROM_PHONE 5U), значит, можно парсить время из строки GET
+        if (BUFF.length() > 7U){ // пускай будет хотя бы 7
+          memcpy(buff, &inputBuffer[4], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 5
+          phoneTimeLastSync = (time_t)atoi(buff);
+          manualTimeShift = phoneTimeLastSync - millis() / 1000UL;
+          #ifdef WARNING_IF_NO_TIME
+            noTimeClear();
+          #endif // WARNING_IF_NO_TIME  
+          timeSynched = true;
+          #if defined(PHONE_N_MANUAL_TIME_PRIORITY) && defined(USE_NTP)
+            stillUseNTP = false;
+          #endif
+        }
+      }
+      #endif // GET_TIME_FROM_PHONE
       sendCurrent(inputBuffer);
     }
 #if defined(GENERAL_DEBUG) || defined(USE_IOS_APP)
     else if (!strncmp_P(inputBuffer, PSTR("DEB"), 3))
     {
         //#ifdef USE_NTP
-        #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
+        #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
         getFormattedTime(inputBuffer);
         sprintf_P(inputBuffer, PSTR("OK %s"), inputBuffer);
         #else
@@ -92,7 +109,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       memcpy(buff, &inputBuffer[3], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 4
       modes[currentMode].Brightness = constrain(atoi(buff), 1, 255);
       FastLED.setBrightness(modes[currentMode].Brightness);
-      loadingFlag = true;
+      //loadingFlag = true; //не хорошо делать перезапуск эффекта после изменения яркости, но в некоторых эффектах от чётности яркости мог бы зависеть внешний вид
       settChanged = true;
       eepromTimeout = millis();
       sendCurrent(inputBuffer);
@@ -239,17 +256,46 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       }
       #endif
     }
-
+    
     else if (!strncmp_P(inputBuffer, PSTR("DISCOVER"), 8))  // обнаружение приложением модуля esp в локальной сети
     {
-      if (espMode == 1U)                                    // работает только в режиме WiFi клиента
+      if (espMode == 1U)                                    // работает только в режиме WiFi клиента. интересно, зачем было запрещать обнаружение точки доступа?
       {
-        sprintf_P(inputBuffer, PSTR("IP %u.%u.%u.%u:%u"),
+        #ifdef SEND_LAMP_NAME_TO_APP
+          sprintf_P(inputBuffer, PSTR("IP %u.%u.%u.%u:%u:%s"),
+          WiFi.localIP()[0],
+          WiFi.localIP()[1],
+          WiFi.localIP()[2],
+          WiFi.localIP()[3],
+          ESP_UDP_PORT,
+          AP_NAME);
+        #else
+          sprintf_P(inputBuffer, PSTR("IP %u.%u.%u.%u:%u"),
           WiFi.localIP()[0],
           WiFi.localIP()[1],
           WiFi.localIP()[2],
           WiFi.localIP()[3],
           ESP_UDP_PORT);
+        #endif
+      }
+      else
+      {
+        #ifdef SEND_LAMP_NAME_TO_APP
+          sprintf_P(inputBuffer, PSTR("IP %u.%u.%u.%u:%u:%s"),
+          AP_STATIC_IP[0],
+          AP_STATIC_IP[1],
+          AP_STATIC_IP[2],
+          AP_STATIC_IP[3],
+          ESP_UDP_PORT,
+          AP_NAME);
+        #else
+          sprintf_P(inputBuffer, PSTR("IP %u.%u.%u.%u:%u"),
+          AP_STATIC_IP[0],
+          AP_STATIC_IP[1],
+          AP_STATIC_IP[2],
+          AP_STATIC_IP[3],
+          ESP_UDP_PORT);
+        #endif
       }
     }
 
@@ -408,7 +454,16 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
             uint8_t mtD = BUFF.substring(15, 16).toInt();
             if (mtH < 24U && mtM < 60U && mtD < 8U && mtD > 0U){
               manualTimeShift = (((3650UL + mtD) * 24UL + mtH) * 60UL + mtM) * 60UL - millis() / 1000UL; // 3650 дней (521 полная неделя + 3 дня для сдвига на понедельник???)
+              #ifdef GET_TIME_FROM_PHONE
+                phoneTimeLastSync = manualTimeShift + millis() / 1000UL;
+              #endif
+              #ifdef WARNING_IF_NO_TIME
+                noTimeClear();
+              #endif
               timeSynched = true;
+              #if defined(PHONE_N_MANUAL_TIME_PRIORITY) && defined(USE_NTP)
+                stillUseNTP = false;
+              #endif
               showWarning(CRGB::Blue, 2000U, 500U);     // мигание голубым цветом 2 секунды (2 раза) - время установлено
             }
             else
@@ -587,24 +642,25 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       FastLED.show();
     }
     else if (!strncmp_P(inputBuffer, PSTR("COL"), 3)) {
-      #ifdef USE_OLD_APP_FROM_KOTEYKA
-       DriwingColor = CRGB(getValue(BUFF, ';', 1).toInt(), getValue(BUFF, ';', 3).toInt(), getValue(BUFF, ';', 2).toInt());
-      #else
+      #ifdef USE_OLD_APP_FROM_KOTEYKA // (в версии 2.3... цвета были только в формате RGB)
        DriwingColor = CRGB(getValue(BUFF, ';', 1).toInt(), getValue(BUFF, ';', 2).toInt(), getValue(BUFF, ';', 3).toInt());
+      #else
+       DriwingColor = CRGB(getValue(BUFF, ';', 1).toInt(), getValue(BUFF, ';', 3).toInt(), getValue(BUFF, ';', 2).toInt());
       #endif
     }
     else if (!strncmp_P(inputBuffer, PSTR("DRAWO"), 5)) { // сокращаем OFF и ON для ускорения регулярного цикла
       if (!strncmp_P(inputBuffer, PSTR("DRAWON"), 6))
-       Painting = 1;
+        Painting = 1;
       else
-       Painting = 0;
-      FastLED.clear();
-      FastLED.show();
+        Painting = 0;
+        //FastLED.clear();
+        //FastLED.show();
     }
-#ifndef USE_OLD_APP_FROM_KOTEYKA
     else if (!strncmp_P(inputBuffer, PSTR("RESET"), 5)) { // сброс настроек WIFI по запросу от приложения
       wifiManager.resetSettings();
     }
+//#ifdef USE_OLD_APP_FROM_KOTEYKA // (в версии 2.3... были кнопки, чтобы сохранить настройки эффектов из приложения в лампу)
+//и в новых тоже появились
     else if (!strncmp_P(inputBuffer, PSTR("SETS"), 4)) // передача настроек эффектов по запросу от приложения (если поддерживается приложением)
     {
       memcpy(buff, &inputBuffer[4], strlen(inputBuffer));  // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 5
@@ -632,7 +688,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
           }
       }
     }
-#endif
+//#endif // ifdef USE_OLD_APP_FROM_KOTEYKA
     else
     {
       inputBuffer[0] = '\0';
@@ -670,7 +726,7 @@ void sendCurrent(char *outputBuffer)
   sprintf_P(outputBuffer, PSTR("%s %u"), outputBuffer, (uint8_t)buttonEnabled);
 
   //#ifdef USE_NTP
-  #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
+  #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
   char timeBuf[9];
   getFormattedTime(timeBuf);
   sprintf_P(outputBuffer, PSTR("%s %s"), outputBuffer, timeBuf);

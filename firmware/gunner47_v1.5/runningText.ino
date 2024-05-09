@@ -62,7 +62,7 @@ boolean fillString(const char* text, CRGB letterColor, boolean itsText)
 void printTime(uint32_t thisTime, bool onDemand, bool ONflag) // периодический вывод времени бегущей строкой; onDemand - по требованию, вывод текущего времени; иначе - вывод времени по расписанию
 {
   //#if defined(USE_NTP) && defined(PRINT_TIME)               // вывод, только если используется синхронизация времени и если заказан его вывод бегущей строкой
-  #if defined(USE_NTP) && defined(PRINT_TIME) || defined(USE_MANUAL_TIME_SETTING) && defined(PRINT_TIME)
+  #if defined(USE_NTP) && defined(PRINT_TIME) || defined(USE_MANUAL_TIME_SETTING) && defined(PRINT_TIME) || defined(GET_TIME_FROM_PHONE) && defined(PRINT_TIME)
 
 //  if (espMode != 1U || !ntpServerAddressResolved || !timeSynched)     // вывод только в режиме WiFi клиента и только, если имя сервера времени разрезолвлено
   if (!timeSynched)     // хз зачем было так сложно
@@ -157,7 +157,7 @@ uint8_t getBrightnessForPrintTime(uint32_t thisTime, bool ONflag)     // опр�
                                                                       // текущего времени суток, настроек дневного/ночного времени и того, включена ли сейчас матрица
 {
   //#if defined(USE_NTP) && defined(PRINT_TIME)
-  #if defined(USE_NTP) && defined(PRINT_TIME) || defined(USE_MANUAL_TIME_SETTING) && defined(PRINT_TIME)
+  #if defined(USE_NTP) && defined(PRINT_TIME) || defined(USE_MANUAL_TIME_SETTING) && defined(PRINT_TIME) || defined(GET_TIME_FROM_PHONE) && defined(PRINT_TIME)
 
   //if (espMode != 1U || !ntpServerAddressResolved || ONflag)
   if (!timeSynched || ONflag)     // хз зачем было так сложно

@@ -16,7 +16,7 @@ IPAddress ntpServerIp = {0, 0, 0, 0};
 
 #endif
 
-#if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
+#if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
 
 static CHSV dawnColor = CHSV(0, 0, 0);                                    // цвет "рассвета"
 static CHSV dawnColorMinus1 = CHSV(0, 0, 0);                              // для большей плавности назначаем каждый новый цвет только 1/10 всех диодов; каждая следующая 1/10 часть будет "оставать" на 1 шаг
@@ -56,16 +56,23 @@ if (espMode == 1U){
         }
       }
 
-      //timeSynched = timeClient.update() || timeSynched;                   // если время хотя бы один раз было синхронизировано, продолжаем
+#ifdef PHONE_N_MANUAL_TIME_PRIORITY
+if (stillUseNTP)
+#endif      
       if (timeClient.update()){
+         #ifdef WARNING_IF_NO_TIME
+           noTimeClear();
+         #endif
          timeSynched = true;
-         #ifdef USE_MANUAL_TIME_SETTING // если ручное время тоже поддерживается, сохраняем туда реальное на случай отвалившегося NTP
-         manualTimeShift = localTimeZone.toLocal(timeClient.getEpochTime()) - millis() / 1000UL;
-         //TextTicker = to_string(manualTimeShift);
+         #if defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE) // если ручное время тоже поддерживается, сохраняем туда реальное на случай отвалившегося NTP
+           manualTimeShift = localTimeZone.toLocal(timeClient.getEpochTime()) - millis() / 1000UL;
+         #endif
+         #ifdef PHONE_N_MANUAL_TIME_PRIORITY
+           stillUseNTP = false;
          #endif
       }
 }
-      #endif
+      #endif //USE_NTP
       
       if (!timeSynched)                                                   // если время не было синхронизиировано ни разу, отключаем будильник до тех пор, пока оно не будет синхронизировано
       {
@@ -205,21 +212,21 @@ void getFormattedTime(char *buf)
 
 time_t getCurrentLocalTime()
 {
-  #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING)
+  #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
   if (timeSynched)
   {
-    #if defined(USE_NTP) && defined(USE_MANUAL_TIME_SETTING)
+    #if defined(USE_NTP) && defined(USE_MANUAL_TIME_SETTING) || defined(USE_NTP) && defined(GET_TIME_FROM_PHONE)
     if (ntpServerAddressResolved)
       return localTimeZone.toLocal(timeClient.getEpochTime());
     else    
       return millis() / 1000UL + manualTimeShift;
     #endif
 
-    #if !defined(USE_NTP) && defined(USE_MANUAL_TIME_SETTING)
+    #if !defined(USE_NTP) && defined(USE_MANUAL_TIME_SETTING) || !defined(USE_NTP) && defined(GET_TIME_FROM_PHONE)
     return millis() / 1000UL + manualTimeShift;
     #endif
 
-    #if defined(USE_NTP) && !defined(USE_MANUAL_TIME_SETTING)
+    #if defined(USE_NTP) && !defined(USE_MANUAL_TIME_SETTING) || defined(USE_NTP) && !defined(GET_TIME_FROM_PHONE)
     return localTimeZone.toLocal(timeClient.getEpochTime());
     #endif
   }

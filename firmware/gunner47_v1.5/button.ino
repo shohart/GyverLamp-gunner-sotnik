@@ -189,6 +189,7 @@ void buttonTick()
       case 1U:                                              // удержание после одного клика - изменение скорости
       {
         modes[currentMode].Speed = constrain(brightDirection ? modes[currentMode].Speed + 1 : modes[currentMode].Speed - 1, 1, 255);
+        loadingFlag = true; // без перезапуска эффекта ничего и не увидишь
 
         #ifdef GENERAL_DEBUG
         LOG.printf_P(PSTR("Новое значение скорости: %d\n"), modes[currentMode].Speed);
@@ -200,6 +201,7 @@ void buttonTick()
       case 2U:                                              // удержание после двух кликов - изменение масштаба
       {
         modes[currentMode].Scale = constrain(brightDirection ? modes[currentMode].Scale + 1 : modes[currentMode].Scale - 1, 1, 100);
+        loadingFlag = true; // без перезапуска эффекта ничего и не увидишь
 
         #ifdef GENERAL_DEBUG
         LOG.printf_P(PSTR("Новое значение масштаба: %d\n"), modes[currentMode].Scale);

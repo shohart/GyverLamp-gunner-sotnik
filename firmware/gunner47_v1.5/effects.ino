@@ -6,6 +6,7 @@ uint8_t step;                                      // какой-нибудь с
 uint8_t pcnt;                                      // какой-то счётчик какого-то прогресса
 uint8_t deltaValue;                                // просто повторно используемая переменная
 float speedfactor;                                 // регулятор скорости в эффектах реального времени
+float emitterX, emitterY;                          // какие-то динамичные координаты
 CRGB ledsbuff[NUM_LEDS];                           // копия массива leds[] целиком
 #define NUM_LAYERSMAX 2
 uint8_t noise3d[NUM_LAYERSMAX][WIDTH][HEIGHT];     // двухслойная маска или хранилище свойств в размер всей матрицы
@@ -24,9 +25,9 @@ float   trackingObjectSpeedY[trackingOBJECT_MAX_COUNT];
 float   trackingObjectShift[trackingOBJECT_MAX_COUNT];
 uint8_t trackingObjectHue[trackingOBJECT_MAX_COUNT];
 uint8_t trackingObjectState[trackingOBJECT_MAX_COUNT];
+bool    trackingObjectIsShift[trackingOBJECT_MAX_COUNT];
 #define enlargedOBJECT_MAX_COUNT                     (WIDTH * 2) // максимальное количество сложных отслеживаемых объектов (меньше, чем trackingOBJECT_MAX_COUNT)
 uint8_t enlargedObjectNUM;                                       // используемое в эффекте количество объектов
-bool    enlargedObjectIsShift[enlargedOBJECT_MAX_COUNT];
 long    enlargedObjectTime[enlargedOBJECT_MAX_COUNT];
 
 
@@ -107,7 +108,8 @@ void DrawLineF(float x1, float y1, float x2, float y2, CRGB color){
 CRGB makeDarker( const CRGB& color, fract8 howMuchDarker)
 {
   CRGB newcolor = color;
-  newcolor.nscale8( 255 - howMuchDarker);
+  //newcolor.nscale8( 255 - howMuchDarker);
+  newcolor.fadeToBlackBy(howMuchDarker);//эквивалент
   return newcolor;
 }
 
@@ -2129,8 +2131,9 @@ void lightBallsRoutine()
   // Note that we never actually clear the matrix, we just constantly
   // blur it repeatedly. Since the blurring is 'lossy', there's
   // an automatic trend toward black -- by design.
-  uint8_t blurAmount = dim8_raw(beatsin8(3, 64, 100));
-  blur2d(leds, WIDTH, HEIGHT, blurAmount);
+  //uint8_t blurAmount = dim8_raw(beatsin8(3, 64, 100));
+  //blur2d(leds, WIDTH, HEIGHT, blurAmount);
+  blurScreen(dim8_raw(beatsin8(3, 64, 100)));
 
   // Use two out-of-sync sine waves
   uint16_t i = beatsin16( 79, 0, 255); //91
@@ -2628,7 +2631,7 @@ void ColorCometRoutine() {      // <- ******* для оригинальной п
 //будем использовать uint8_t trackingObjectHue[trackingOBJECT_MAX_COUNT];
 //uint8_t bballsX[enlargedOBJECT_MAX_COUNT] ;                       // прикручено при адаптации для распределения мячиков по радиусу лампы
 //будем использовать uint8_t trackingObjectState[trackingOBJECT_MAX_COUNT];
-//bool enlargedObjectIsShift[enlargedOBJECT_MAX_COUNT] ;                      // прикручено при адаптации для того, чтобы мячики не стояли на месте
+//bool trackingObjectIsShift[enlargedOBJECT_MAX_COUNT] ;                      // прикручено при адаптации для того, чтобы мячики не стояли на месте
 float bballsVImpact0 = sqrt3( -2 * bballsGRAVITY * bballsH0 );  // Impact velocity of the ball when it hits the ground if "dropped" from the top of the strip
 //float bballsVImpact[enlargedOBJECT_MAX_COUNT] ;                   // As time goes on the impact velocity will change, so make an array to store those values
 //будем использовать float trackingObjectSpeedY[trackingOBJECT_MAX_COUNT];
@@ -2652,7 +2655,7 @@ void BBallsRoutine() {
       trackingObjectPosY[i] = 0U;                                // Balls start on the ground
       trackingObjectSpeedY[i] = bballsVImpact0;                // And "pop" up at vImpact0
       trackingObjectShift[i] = 0.90 - float(i) / pow(enlargedObjectNUM, 2); // это, видимо, прыгучесть. для каждого мячика уникальная изначально
-      enlargedObjectIsShift[i] = false;
+      trackingObjectIsShift[i] = false;
       hue2 = (modes[currentMode].Speed > 127U) ? 255U : 0U;                                           // цветные или белые мячики
       hue = (modes[currentMode].Speed == 128U) ? 255U : 254U - modes[currentMode].Speed % 128U * 2U;  // скорость угасания хвостов 0 = моментально
     }
@@ -2678,13 +2681,13 @@ void BBallsRoutine() {
       if ( trackingObjectSpeedY[i] < 0.01 ) // If the ball is barely moving, "pop" it back up at vImpact0
       {
         trackingObjectShift[i] = 0.90 - float(random(0U, 9U)) / pow(random(4U, 9U), 2); // сделал, чтобы мячики меняли свою прыгучесть каждый цикл
-        enlargedObjectIsShift[i] = trackingObjectShift[i] >= 0.89;                             // если мячик максимальной прыгучести, то разрешаем ему сдвинуться
+        trackingObjectIsShift[i] = trackingObjectShift[i] >= 0.89;                             // если мячик максимальной прыгучести, то разрешаем ему сдвинуться
         trackingObjectSpeedY[i] = bballsVImpact0;
       }
     }
     trackingObjectPosY[i] = round( bballsHi * (HEIGHT - 1) / bballsH0);             // Map "h" to a "pos" integer index position on the LED strip
-    if (enlargedObjectIsShift[i] && (trackingObjectPosY[i] == HEIGHT - 1)) {                  // если мячик получил право, то пускай сдвинется на максимальной высоте 1 раз
-      enlargedObjectIsShift[i] = false;
+    if (trackingObjectIsShift[i] && (trackingObjectPosY[i] == HEIGHT - 1)) {                  // если мячик получил право, то пускай сдвинется на максимальной высоте 1 раз
+      trackingObjectIsShift[i] = false;
       if (trackingObjectHue[i] % 2 == 0) {                                       // чётные налево, нечётные направо
         if (trackingObjectState[i] == 0U) trackingObjectState[i] = WIDTH - 1U;
         else --trackingObjectState[i];
@@ -3528,13 +3531,13 @@ void flockRoutine(bool predatorIs) {
       setCurrentPalette();
 
       for (int i = 0; i < boidCount; i++) {
-        boids[i] = Boid(WIDTH - 1U, HEIGHT - 1U);
+        boids[i] = Boid(0, 0);//WIDTH - 1U, HEIGHT - 1U);
         boids[i].maxspeed = 0.380 * modes[currentMode].Speed /127.0+0.380/2;
         boids[i].maxforce = 0.015 * modes[currentMode].Speed /127.0+0.015/2;
       }
       predatorPresent = predatorIs && random8(2U);
       //if (predatorPresent) { нужно присвоить ему значения при первом запуске, иначе он с нулями будет жить
-        predator = Boid(WIDTH + WIDTH - 1, HEIGHT + HEIGHT - 1); // я хз как распределить параметры в этой функции. там, вроде бы, и координаты и скорости одновременно
+        predator = Boid(0, 0);//WIDTH + WIDTH - 1, HEIGHT + HEIGHT - 1);
         predator.maxspeed = 0.385 * modes[currentMode].Speed /127.0+0.385/2;
         predator.maxforce = 0.020 * modes[currentMode].Speed /127.0+0.020/2;
         predator.neighbordist = 8.0; // было 16.0 и хищник гонял по одной линии всегда
@@ -3624,7 +3627,7 @@ void whirlRoutine(bool oneColor) {
       ff_z = random16();
 
       for (uint8_t i = 0; i < AVAILABLE_BOID_COUNT; i++) {
-        boids[i] = Boid(random(WIDTH), 0);
+        boids[i] = Boid(random8(WIDTH), 0);
       }
   } 
   dimAll(240);
@@ -3953,9 +3956,9 @@ uint8_t wrapY(int8_t y){
 
 void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLength, CRGB rainColor, bool splashes, bool clouds, bool storm)
 {
-  static uint16_t noiseX = random16();
-  static uint16_t noiseY = random16();
-  static uint16_t noiseZ = random16();
+  ff_x = random16();
+  ff_y = random16();
+  ff_z = random16();
 
   CRGB lightningColor = CRGB(72,72,80);
   CRGBPalette16 rain_p( CRGB::Black, rainColor );
@@ -4067,12 +4070,12 @@ void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLen
       for(uint8_t z = 0; z < cloudHeight; z++) {
         int yoffset = noiseScale * z - hue;
         uint8_t dataSmoothing = 192;
-        uint8_t noiseData = qsub8(inoise8(noiseX + xoffset,noiseY + yoffset,noiseZ),16);
+        uint8_t noiseData = qsub8(inoise8(ff_x + xoffset,ff_y + yoffset,ff_z),16);
         noiseData = qadd8(noiseData,scale8(noiseData,39));
         noise[x * cloudHeight + z] = scale8( noise[x * cloudHeight + z], dataSmoothing) + scale8( noiseData, 256 - dataSmoothing);
         nblend(leds[XY(x,HEIGHT-z-1)], ColorFromPalette(rainClouds_p, noise[x * cloudHeight + z]), (cloudHeight-z)*(250/cloudHeight));
       }
-      noiseZ ++;
+      ff_z ++;
     }
   }
 }
@@ -4211,9 +4214,9 @@ void bounceRoutine()
     uint8_t colorWidth = 256U / enlargedObjectNUM;
     for (uint8_t i = 0; i < enlargedObjectNUM; i++)
     {
-      Boid boid = Boid(i, HEIGHT / 8);
+      Boid boid = Boid(i % WIDTH, 0);//random8(HEIGHT));//HEIGHT / 8
       boid.velocity.x = 0;
-      boid.location.y = 0;//(HEIGHT -1) / 4;
+      //boid.location.y = 0;//(HEIGHT -1) / 4;
       boid.velocity.y = i * -0.01;
       boid.colorIndex = colorWidth * i;
       boid.maxforce = 10;
@@ -4232,11 +4235,13 @@ void bounceRoutine()
     else if (boid.location.x < 0) boid.location.x = boid.location.x + WIDTH; // для субпиксельной версии
     CRGB color = ColorFromPalette(*curPalette, boid.colorIndex); // boid.colorIndex + hue
     //drawPixelXY((uint32_t)(boid.location.x) % WIDTH, boid.location.y, color);
+    //drawPixelXYFseamless(boid.location.x, boid.location.y, color); вот это я тупанул
     drawPixelXYF(boid.location.x, boid.location.y, color);
+
     if (boid.location.y <= 0)
     {
       boid.location.y = 0;
-      boid.velocity.y *= -1.0;
+      boid.velocity.y = -boid.velocity.y;
       boid.velocity.x *= 0.9;
       if (!random8() || boid.velocity.y < 0.01)
       {
@@ -4654,7 +4659,7 @@ void cube2dRoutine(){
 // (c) SottNick
 
 #define CLOCK_SAVE_MODE     // удалите или закомментируйте эту строчку, чтобы цифры всегда оставались на одном месте, не двигались по вертикали (не хорошо для светодиодов. выгорают зря)
-#if HEIGHT > 12
+#if (HEIGHT > 12) || (HEIGHT < 11)
 #define CLOCK_BLINKING      // удалите или закомментируйте эту строчку, чтобы точки не мигали
 #endif
 //uint8_t hue, hue2; // храним тут часы и минуты
@@ -4703,6 +4708,7 @@ void drawDig3x5(uint8_t x, uint8_t y, uint8_t num, CRGB color){ // uint8_t hue, 
     }
 }
 
+#if HEIGHT > 10 // часы в столбик будут только если высота 11 пикселей и больше
 void clockRoutine(){
     if (loadingFlag)
     {
@@ -4786,8 +4792,57 @@ void clockRoutine(){
     drawPixelXY((poleX + 2U) % WIDTH, poleY + 6U, CHSV(deltaValue, (modes[currentMode].Scale == 100) ? 0U : 255U, deltaHue2)); // цвет белый для .Scale=100
     drawPixelXY((poleX + 4U) % WIDTH, poleY + 6U, CHSV(deltaValue, (modes[currentMode].Scale == 100) ? 0U : 255U, deltaHue2)); // цвет белый для .Scale=100
 //  }
-#endif
+#endif //#ifdef CLOCK_BLINKING
 }
+#else //#if HEIGHT > 10 ------------------------------------------------------------------------------------- ещё одна копия часов для низких матриц и гирлянд
+void clockRoutine(){ // чтобы цифры были не в столбик, а в строчку
+    if (loadingFlag)
+    {
+      loadingFlag = false;
+      poleX = (modes[currentMode].Speed - 1U) % WIDTH; //смещение цифр по горизонтали
+      poleY = (modes[currentMode].Speed - 1U) / WIDTH % (HEIGHT - 5U);  //смещение цифр по вертикали (для режима CLOCK_SAVE_MODE будет меняться само)
+      hue2 = 255U; // количество минут в данный момент (первоначально запредельое значение)
+      deltaHue2 = 0; // яркость точки в данный момент
+      deltaValue = modes[currentMode].Scale * 2.55; // выбранный оттенок цифр
+    }
+  time_t currentLocalTime = getCurrentLocalTime();
+
+  if (minute(currentLocalTime) != hue2)
+  {
+    #ifdef CLOCK_SAVE_MODE
+      poleY = (poleY + 1U) % (HEIGHT - 5U);
+    #endif
+    step = 1U; // = CLOCK_REFRESH_DELAY; раньше делал постепенное затухание. получалось хуже
+    hue = hour(currentLocalTime);
+    hue2 = minute(currentLocalTime);
+  }
+  if (step > 0) // тут меняются цифры на часах
+  {
+    step--;
+    //uint8_t bri = (CLOCK_REFRESH_DELAY - step) * 255.0 / CLOCK_REFRESH_DELAY;
+    uint8_t sat = (modes[currentMode].Scale == 100) ? 0U : 255U;
+
+    FastLED.clear();
+    // рисуем цифры
+    drawDig3x5( poleX               , poleY, hue  / 10U % 10U, CHSV(deltaValue, sat, 255U));
+    drawDig3x5((poleX +  4U) % WIDTH, poleY, hue        % 10U, CHSV(deltaValue, sat, 255U));
+    drawDig3x5((poleX +  9U) % WIDTH, poleY, hue2 / 10U % 10U, CHSV(deltaValue, sat, 255U));
+    drawDig3x5((poleX + 13U) % WIDTH, poleY, hue2       % 10U, CHSV(deltaValue, sat, 255U));
+  }
+
+#ifdef CLOCK_BLINKING
+  // тут мигают точки
+    if (deltaHue2 & 0x01)
+      deltaHue2 = deltaHue2 - ((deltaHue2 >  15U) ? 16U : 15U);//- ((deltaHue2 >  63U) ? 64U : 63U);
+    else
+      deltaHue2 = deltaHue2 + ((deltaHue2 < 240U) ? 16U : 15U);//+ ((deltaHue2 < 192U) ? 64U : 63U);
+  
+    drawPixelXY((poleX + 8U) % WIDTH, poleY + 1U, CHSV(deltaValue, (modes[currentMode].Scale == 100) ? 0U : 255U, deltaHue2)); // цвет белый для .Scale=100
+    drawPixelXY((poleX + 8U) % WIDTH, poleY + 3U, CHSV(deltaValue, (modes[currentMode].Scale == 100) ? 0U : 255U, deltaHue2)); // цвет белый для .Scale=100
+//  }
+#endif //#ifdef CLOCK_BLINKING
+}
+#endif //#if HEIGHT > 10
 
 // ------------------------------ ЭФФЕКТ ДЫМ ----------------------
 // (c) SottNick
@@ -5570,6 +5625,7 @@ void snakesRoutine(){
 //---------- Эффект "Фейерверк" Салют ---
 //адаптация и переписал - kostyamat
 //https://gist.github.com/jasoncoon/0cccc5ba7ab108c0a373
+//https://github.com/marcmerlin/FastLED_NeoMatrix_SmartMatrix_LEDMatrix_GFX_Demos/blob/master/FastLED/FireWorks2/FireWorks2.ino
 
 // не понравился
 /*
@@ -6134,8 +6190,9 @@ void popcornRoutine() {
     }
   }
   float popcornGravity = 0.1 * speedfactor;
-  if (modes[currentMode].Speed & 0x01) fadeToBlackBy(leds, NUM_LEDS, 60);
-  else FastLED.clear();// fadeToBlackBy(leds, NUM_LEDS, 250);
+  //if (modes[currentMode].Speed & 0x01) // теперь чётностью скорости определяется белый/цветной попкорн, а чётностью яркости больше ничего
+    fadeToBlackBy(leds, NUM_LEDS, 60);
+  //else FastLED.clear();// fadeToBlackBy(leds, NUM_LEDS, 250);
 
 //void popcornMove(float popcornGravity) {
   for (uint8_t r = 0; r < enlargedObjectNUM; r++) {
@@ -6187,11 +6244,11 @@ void popcornRoutine() {
 //void popcornPaint() {
     // make the acme gray, because why not
     if (-0.004 > trackingObjectSpeedY[r] and trackingObjectSpeedY[r] < 0.004)
-      drawPixelXYF(trackingObjectPosX[r], trackingObjectPosY[r], (modes[currentMode].Brightness & 0x01) ?
+      drawPixelXYF(trackingObjectPosX[r], trackingObjectPosY[r], (modes[currentMode].Speed & 0x01) ?
                 ColorFromPalette(*curPalette, trackingObjectHue[r]) 
               : CRGB::Pink);
     else
-      drawPixelXYF(trackingObjectPosX[r], trackingObjectPosY[r], (modes[currentMode].Brightness & 0x01) ? 
+      drawPixelXYF(trackingObjectPosX[r], trackingObjectPosY[r], (modes[currentMode].Speed & 0x01) ? 
                 CRGB::Gray 
               : ColorFromPalette(*curPalette, trackingObjectHue[r]));
   }
@@ -6501,21 +6558,20 @@ void attractRoutine() {
     
 
       for (uint8_t i = 0; i < enlargedObjectNUM; i++) {
-        boids[i] = Boid(random(HEIGHT), 0);
-
-            boids[i] = Boid(WIDTH - 1, HEIGHT - i);
+            //boids[i] = Boid(random(HEIGHT), 0);
+            boids[i] = Boid(random8(WIDTH), random8(HEIGHT));//WIDTH - 1, HEIGHT - i);
+            //boids[i].location.x = random8(WIDTH);//CENTER_X_MINOR + (float)random8() / 50.;
+            //boids[i].location.y = random8(HEIGHT);//CENTER_Y_MINOR + (float)random8() / 50.;
             boids[i].mass = ((float)random8(33U, 134U)) / 100.; // random(0.1, 2); // сюда можно поставить регулятор разлёта. чем меньше число, тем дальше от центра будет вылет
             //boids[i].velocity.x = ((float) random(40, 50)) / 100.0;
             //boids[i].velocity.x = ((float) random(modes[currentMode].Speed, modes[currentMode].Scale+10)) / 200.0;
             //boids[i].velocity.x = ((float) random8(modes[currentMode].Scale+45, modes[currentMode].Scale+100)) / 500.0;
             boids[i].velocity.x = ((float) random8(46U, 100U)) / 500.0;
-            if (random8(2U)) boids[i].velocity.x *= -1.;
+            if (random8(2U)) boids[i].velocity.x = -boids[i].velocity.x;
             boids[i].velocity.y = 0;
             boids[i].colorIndex = random8();//i * 32;
             //boids[i].maxspeed = 0.380 * modes[currentMode].Speed /63.5+0.380;
             //boids[i].maxforce = 0.015 * modes[currentMode].Speed /63.5+0.015;
-            boids[i].location.x = random8(WIDTH);//CENTER_X_MINOR + (float)random8() / 50.;
-            boids[i].location.y = random8(HEIGHT);//CENTER_Y_MINOR + (float)random8() / 50.;
       }
   } 
   dimAll(220);
@@ -6644,6 +6700,7 @@ void smokeballsRoutine(){
   }
   
   dimAll(240);
+if (modes[currentMode].Speed & 0x01)
   blurScreen(20);
   for (byte j = 0; j < enlargedObjectNUM; j++) {
     trackingObjectPosX[j] = beatsin16((uint8_t)(trackingObjectSpeedX[j] * (speedfactor * 5.)), trackingObjectShift[j], trackingObjectState[j] + trackingObjectShift[j], trackingObjectHue[j]*256, trackingObjectHue[j]*8);
@@ -6846,3 +6903,417 @@ void pacificRoutine()
   pacifica_deepen_colors(&*leds);
   blurScreen(20);
 }
+
+//-------- по мотивам Эффектов Particle System -------------------------
+// https://github.com/fuse314/arduino-particle-sys
+// https://github.com/giladaya/arduino-particle-sys
+// https://www.youtube.com/watch?v=S6novCRlHV8&t=51s
+//#include <ParticleSys.h>
+//при попытке вытащить из этой библиотеки только минимально необходимое выяснилось, что там очередной (третий) вариант реализации субпиксельной графики.
+//ну его нафиг. лучше будет повторить визуал имеющимися в прошивке средствами.
+
+void particlesUpdate2(uint8_t i){
+  //age
+  trackingObjectState[i]--; //ttl // ещё и сюда надо speedfactor вкорячить. удачи там!
+
+  //apply acceleration
+  //trackingObjectSpeedX[i] = min((int)trackingObjectSpeedX[i]+ax, WIDTH);
+  //trackingObjectSpeedY[i] = min((int)trackingObjectSpeedY[i]+ay, HEIGHT);
+
+  //apply velocity
+  trackingObjectPosX[i] += trackingObjectSpeedX[i];
+  trackingObjectPosY[i] += trackingObjectSpeedY[i];
+  if(trackingObjectState[i] == 0 || trackingObjectPosX[i] <= -1 || trackingObjectPosX[i] >= WIDTH || trackingObjectPosY[i] <= -1 || trackingObjectPosY[i] >= HEIGHT) 
+    trackingObjectIsShift[i] = false;
+}
+
+// ============= ЭФФЕКТ ИСТОЧНИК ===============
+// (c) SottNick
+// выглядит как https://github.com/fuse314/arduino-particle-sys/blob/master/examples/StarfieldFastLED/StarfieldFastLED.ino
+
+void starfield2Emit(uint8_t i){
+  if (hue++ & 0x01)
+    hue2++;//counter++;
+  //source->update(g); хз зачем это было в оригинале - там только смерть source.isAlive высчитывается, вроде
+
+  trackingObjectPosX[i] = WIDTH * 0.5;//CENTER_X_MINOR;// * RENDERER_RESOLUTION; //  particle->x = source->x;
+  trackingObjectPosY[i] = HEIGHT * 0.5;//CENTER_Y_MINOR;// * RENDERER_RESOLUTION; //  // particle->y = source->y;
+
+  //trackingObjectSpeedX[i] = ((float)random8()-127.)/512./0.25*speedfactor; // random(_hVar)-_constVel; // particle->vx
+  trackingObjectSpeedX[i] = ((float)random8()-127.)/512.; // random(_hVar)-_constVel; // particle->vx
+  //trackingObjectSpeedY[i] = sqrt((speedfactor*speedfactor+0.0001)-trackingObjectSpeedX[i]*trackingObjectSpeedX[i]); // sqrt(pow(_constVel,2)-pow(trackingObjectSpeedX[i],2)); // particle->vy зависит от particle->vx - не ошибка
+  trackingObjectSpeedY[i] = sqrt(0.0626-trackingObjectSpeedX[i]*trackingObjectSpeedX[i]); // sqrt(pow(_constVel,2)-pow(trackingObjectSpeedX[i],2)); // particle->vy зависит от particle->vx - не ошибка
+  if(random8(2U)) { trackingObjectSpeedY[i]=-trackingObjectSpeedY[i]; }
+  trackingObjectState[i] = random8(50, 250); // random8(minLife, maxLife);// particle->ttl
+  if (modes[currentMode].Speed & 0x01)
+    trackingObjectHue[i] = hue2;// (counter/2)%255; // particle->hue
+  else
+    trackingObjectHue[i] = random8();
+  trackingObjectIsShift[i] = true; // particle->isAlive
+}
+
+void starfield2Routine(){
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    //speedfactor = (float)modes[currentMode].Speed / 510.0f + 0.001f;    
+    enlargedObjectNUM = (modes[currentMode].Scale - 1U) / 99.0 * (trackingOBJECT_MAX_COUNT - 1U) + 1U;
+    if (enlargedObjectNUM > trackingOBJECT_MAX_COUNT) enlargedObjectNUM = trackingOBJECT_MAX_COUNT;
+    //deltaValue = 1; // количество зарождающихся частиц за 1 цикл //perCycle = 1;
+    deltaValue = enlargedObjectNUM / (sqrt3(CENTER_X_MAJOR*CENTER_X_MAJOR + CENTER_Y_MAJOR*CENTER_Y_MAJOR) * 4U) + 1U; // 4 - это потому что за 1 цикл частица пролетает ровно четверть расстояния между 2мя соседними пикселями
+    for(int i = 0; i<enlargedObjectNUM; i++)
+      trackingObjectIsShift[i] = false; // particle->isAlive
+  }
+  step = deltaValue; //счётчик количества частиц в очереди на зарождение в этом цикле
+  //renderer.fade(leds); = fadeToBlackBy(128); = dimAll(255-128)
+  //dimAll(255-128/.25*speedfactor); ахах-ха. очередной эффект, к которому нужно будет "подобрать коэффициенты"
+  dimAll(127);
+
+  //go over particles and update matrix cells on the way
+  for(int i = 0; i<enlargedObjectNUM; i++) {
+    if (!trackingObjectIsShift[i] && step) {
+      //emitter->emit(&particles[i], this->g);
+      starfield2Emit(i);
+      step--;
+    }
+    if (trackingObjectIsShift[i]){ // particle->isAlive
+      //particles[i].update(this->g);
+      particlesUpdate2(i);
+
+      //generate RGB values for particle
+      CRGB baseRGB = CHSV(trackingObjectHue[i], 255,255); // particles[i].hue
+
+      //baseRGB.fadeToBlackBy(255-trackingObjectState[i]);
+      baseRGB.nscale8(trackingObjectState[i]);//эквивалент
+      drawPixelXYF(trackingObjectPosX[i], trackingObjectPosY[i], baseRGB);
+    }
+  }
+}
+
+// ============= ЭФФЕКТ ФЕЯ ===============
+// (c) SottNick
+#define FAIRY_BEHAVIOR //типа сложное поведение
+
+void fairyEmit(uint8_t i) //particlesEmit(Particle_Abstract *particle, ParticleSysConfig *g)
+{
+    if (deltaHue++ & 0x01)
+      if (hue++ & 0x01)
+        hue2++;//counter++;
+    trackingObjectPosX[i] = boids[0].location.x;
+    trackingObjectPosY[i] = boids[0].location.y;
+
+    //хотите навставлять speedfactor? - тут не забудьте
+    //trackingObjectSpeedX[i] = ((float)random8()-127.)/512./0.25*speedfactor; // random(_hVar)-_constVel; // particle->vx
+    trackingObjectSpeedX[i] = ((float)random8()-127.)/512.; // random(_hVar)-_constVel; // particle->vx
+    //trackingObjectSpeedY[i] = sqrt((speedfactor*speedfactor+0.0001)-trackingObjectSpeedX[i]*trackingObjectSpeedX[i]); // sqrt(pow(_constVel,2)-pow(trackingObjectSpeedX[i],2)); // particle->vy зависит от particle->vx - не ошибка
+    trackingObjectSpeedY[i] = sqrt(0.0626-trackingObjectSpeedX[i]*trackingObjectSpeedX[i]); // sqrt(pow(_constVel,2)-pow(trackingObjectSpeedX[i],2)); // particle->vy зависит от particle->vx - не ошибка
+    if(random8(2U)) { trackingObjectSpeedY[i]=-trackingObjectSpeedY[i]; }
+
+    trackingObjectState[i] = random8(20, 80); // random8(minLife, maxLife);// particle->ttl
+    trackingObjectHue[i] = hue2;// (counter/2)%255; // particle->hue
+    trackingObjectIsShift[i] = true; // particle->isAlive
+}
+
+void fairyRoutine(){
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    //speedfactor = (float)modes[currentMode].Speed / 510.0f + 0.001f;    
+
+    deltaValue = 10; // количество зарождающихся частиц за 1 цикл //perCycle = 1;
+    enlargedObjectNUM = (modes[currentMode].Scale - 1U) / 99.0 * (trackingOBJECT_MAX_COUNT - 1U) + 1U;
+    if (enlargedObjectNUM > trackingOBJECT_MAX_COUNT) enlargedObjectNUM = trackingOBJECT_MAX_COUNT;
+    for(int i = 0; i<enlargedObjectNUM; i++)
+      trackingObjectIsShift[i] = false; // particle->isAlive
+
+      // лень было придумывать алгоритм для таектории феи, поэтому это будет нулевой "бойд" из эффекта Притяжение
+      boids[0] = Boid(random8(WIDTH), random8(HEIGHT));//WIDTH - 1, HEIGHT - 1);
+      //boids[0].location.x = random8(WIDTH);
+      //boids[0].location.y = random8(HEIGHT);
+      boids[0].mass = 0.5;//((float)random8(33U, 134U)) / 100.; // random(0.1, 2); // сюда можно поставить регулятор разлёта. чем меньше число, тем дальше от центра будет вылет
+      boids[0].velocity.x = ((float) random8(46U, 100U)) / 500.0;
+      if (random8(2U)) boids[0].velocity.x = -boids[0].velocity.x;
+      boids[0].velocity.y = 0;
+      hue = random8();//boids[0].colorIndex = 
+      #ifdef FAIRY_BEHAVIOR
+        deltaHue2 = 1U;
+      #endif;
+  }
+  step = deltaValue; //счётчик количества частиц в очереди на зарождение в этом цикле
+  
+#ifdef FAIRY_BEHAVIOR
+  if (!deltaHue && deltaHue2 && fabs(boids[0].velocity.x) + fabs(boids[0].velocity.y) < 0.15){ 
+    deltaHue2 = 0U;
+    
+    boids[1].velocity.x = ((float)random8()+255.) / 4080.;
+    boids[1].velocity.y = ((float)random8()+255.) / 2040.;
+    if (boids[0].location.x > WIDTH * 0.5) boids[1].velocity.x = -boids[1].velocity.x;
+    if (boids[0].location.y > HEIGHT * 0.5) boids[1].velocity.y = -boids[1].velocity.y;
+  }
+  if (!deltaHue2){
+    step = 1U;
+    
+    boids[0].location.x += boids[1].velocity.x;
+    boids[0].location.y += boids[1].velocity.y;
+    deltaHue2 = (boids[0].location.x <= 0 || boids[0].location.x >= WIDTH-1 || boids[0].location.y <= 0 || boids[0].location.y >= HEIGHT-1);
+  }
+  else
+#endif // FAIRY_BEHAVIOR
+  {  
+    PVector attractLocation = PVector(WIDTH * 0.5, HEIGHT * 0.5);
+    //float attractMass = 10;
+    //float attractG = .5;
+    // перемножаем и получаем 5.
+    Boid boid = boids[0];
+    PVector force = attractLocation - boid.location;      // Calculate direction of force
+    float d = force.mag();                                // Distance between objects
+    d = constrain(d, 5.0f, HEIGHT);//видео снято на 5.0f  // Limiting the distance to eliminate "extreme" results for very close or very far objects
+//d = constrain(d, modes[currentMode].Scale / 10.0, HEIGHT);
+
+    force.normalize();                                    // Normalize vector (distance doesn't matter here, we just want this vector for direction)
+    float strength = (5. * boid.mass) / (d * d);          // Calculate gravitional force magnitude 5.=attractG*attractMass
+//float attractMass = (modes[currentMode].Scale) / 10.0 * .5;
+//strength = (attractMass * boid.mass) / (d * d);
+    force *= strength;                                    // Get force vector --> magnitude * direction
+    boid.applyForce(force);
+    boid.update();
+    
+    if (boid.location.x <= -1) boid.location.x = -boid.location.x;
+    else if (boid.location.x >= WIDTH) boid.location.x = -boid.location.x+WIDTH+WIDTH;
+    if (boid.location.y <= -1) boid.location.y = -boid.location.y;
+    else if (boid.location.y >= HEIGHT) boid.location.y = -boid.location.y+HEIGHT+HEIGHT;
+    boids[0] = boid;
+
+    //EVERY_N_SECONDS(20)
+    if (!deltaHue){
+      if (random8(3U)){
+        d = ((random8(2U)) ? boids[0].velocity.x : boids[0].velocity.y) * ((random8(2U)) ? .2 : -.2);
+        boids[0].velocity.x += d;
+        boids[0].velocity.y -= d;
+      }
+      else {
+        if (fabs(boids[0].velocity.x) < 0.02)
+          boids[0].velocity.x = -boids[0].velocity.x;
+        else if (fabs(boids[0].velocity.y) < 0.02)
+          boids[0].velocity.y = -boids[0].velocity.y;
+      }
+    }
+  }
+
+
+  //renderer.fade(leds); = fadeToBlackBy(128); = dimAll(255-128)
+  //dimAll(255-128/.25*speedfactor); очередной эффект, к которому нужно будет "подобрать коэффициенты"
+  //if (modes[currentMode].Speed & 0x01)
+    dimAll(127);
+  //else FastLED.clear();    
+
+  //go over particles and update matrix cells on the way
+  for(int i = 0; i<enlargedObjectNUM; i++) {
+    if (!trackingObjectIsShift[i] && step) {
+      //emitter->emit(&particles[i], this->g);
+      fairyEmit(i);
+      step--;
+    }
+    if (trackingObjectIsShift[i]){ // particle->isAlive
+      //particles[i].update(this->g);
+      if (modes[currentMode].Scale & 0x01 && trackingObjectSpeedY[i] > -1) trackingObjectSpeedY[i] -= 0.05; //apply acceleration
+      particlesUpdate2(i);
+
+      //generate RGB values for particle
+      CRGB baseRGB = CHSV(trackingObjectHue[i], 255,255); // particles[i].hue
+
+      //baseRGB.fadeToBlackBy(255-trackingObjectState[i]);
+      baseRGB.nscale8(trackingObjectState[i]);//эквивалент
+      drawPixelXYF(trackingObjectPosX[i], trackingObjectPosY[i], baseRGB);
+    }
+  }
+  drawPixelXYF(boids[0].location.x, boids[0].location.y, CHSV(hue, 160U, 255U));//boid.colorIndex + hue
+
+     
+}
+
+// ============= ЭФФЕКТ ЗВЁЗДНЫЕ ВОЙНЫ ===============
+// (c) SottNick
+/* эффект стрёмный. доделывать не стал
+void starwarsEmit(uint8_t i) //particlesEmit(Particle_Abstract *particle, ParticleSysConfig *g)
+{
+    if (deltaHue++ & 0x01)
+      if (hue++ & 0x01)
+        hue2++;//counter++;
+    trackingObjectPosX[i] = boids[1].location.x;
+    trackingObjectPosY[i] = boids[1].location.y;
+
+    float dx = boids[0].location.x - boids[1].location.x;
+    float dy = boids[0].location.y - boids[1].location.y;
+    float dxy = dx*dx+dy*dy;
+    if (dxy != 0){
+      dxy = sqrt(dxy) / 0.25; // 0.25 пикселя - расстояние, пролетаемое снарядом за 1 цикл
+      trackingObjectSpeedX[i] = dx / dxy;
+      trackingObjectSpeedY[i] = dy / dxy;
+      trackingObjectState[i] = 60;//random8(20, 60); // random8(minLife, maxLife);// particle->ttl
+      trackingObjectHue[i] = hue2;// (counter/2)%255; // particle->hue
+      trackingObjectIsShift[i] = true; // particle->isAlive
+
+      if (!trackingObjectIsShift[0U] && pcnt){
+        trackingObjectPosX[0] = boids[0].location.x;
+        trackingObjectPosY[0] = boids[0].location.y;
+        trackingObjectSpeedX[0U] = (-4) * trackingObjectSpeedX[i];
+        trackingObjectSpeedY[0U] = (-4) * trackingObjectSpeedY[i];
+        trackingObjectState[0U] = 255;
+        trackingObjectHue[0U] = hue;
+        trackingObjectIsShift[0U] = true;
+        pcnt--;
+      }
+    }
+}
+
+void starwarsRoutine(){
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    //speedfactor = (float)modes[currentMode].Speed / 510.0f + 0.001f;    
+    deltaValue = 1; // количество зарождающихся частиц за 1 цикл //perCycle = 1;
+    enlargedObjectNUM = (modes[currentMode].Scale - 1U) / 99.0 * (trackingOBJECT_MAX_COUNT - 1U) + 1U;
+    if (enlargedObjectNUM > trackingOBJECT_MAX_COUNT) enlargedObjectNUM = trackingOBJECT_MAX_COUNT;
+    for(int i = 0; i<enlargedObjectNUM; i++)
+      trackingObjectIsShift[i] = false; // particle->isAlive
+
+    boids[0].colorIndex = random8();
+    boids[1].colorIndex = boids[0].colorIndex + 127U;
+  }
+  
+  boids[0].location.x = 2 + sin8( millis() / 10) / 22.;
+  boids[0].location.y = 2 + cos8( millis() / 10) / 22.;
+  boids[1].location.x = 4 + sin8( millis() / 46) / 32.;
+  boids[1].location.y = 4 + cos8( millis() / 15) / 32.;
+
+  
+  //step = deltaValue; //счётчик количества частиц в очереди на зарождение в этом цикле
+  step = random(2U);
+  
+  pcnt = 1U;
+if (modes[currentMode].Speed & 0x01)
+  dimAll(127);
+else FastLED.clear();    
+
+  //go over particles and update matrix cells on the way
+  for(int i = 0; i<enlargedObjectNUM; i++) {
+    if (i>0U && !trackingObjectIsShift[i] && step) {
+      //emitter->emit(&particles[i], this->g);
+      starwarsEmit(i);
+      step--;
+    }
+    if (trackingObjectIsShift[i]){ // particle->isAlive
+      //particles[i].update(this->g);
+      particlesUpdate2(i);
+
+      //generate RGB values for particle
+      CRGB baseRGB = CHSV(trackingObjectHue[i], 255,255); // particles[i].hue
+
+      //baseRGB.fadeToBlackBy(255-trackingObjectState[i]);
+      baseRGB.nscale8(trackingObjectState[i]);//эквивалент
+      drawPixelXYF(trackingObjectPosX[i], trackingObjectPosY[i], baseRGB);
+    }
+  }
+  drawPixelXYF(boids[0].location.x, boids[0].location.y, CHSV(boids[0].colorIndex, 160U, 255U));
+  drawPixelXYF(boids[1].location.x, boids[1].location.y, CHSV(boids[1].colorIndex, 160U, 255U));
+}
+*/
+
+// ============= ЭФФЕКТ ИСТОЧНИКИ ===============
+// (c) SottNick
+/* тоже такое себе зрелище
+void fountainsDrift(uint8_t j){
+  //float shift = random8()
+  boids[j].location.x += boids[j].velocity.x;
+  boids[j].location.y += boids[j].velocity.y;
+  if (boids[j].location.x + boids[j].velocity.x < 0){
+    //boids[j].location.x = WIDTH - 1 + boids[j].location.x;
+    boids[j].location.x = -boids[j].location.x;
+    boids[j].velocity.x = -boids[j].velocity.x;
+  }
+  if (boids[j].location.x > WIDTH - 1){
+    //boids[j].location.x = boids[j].location.x + 1 - WIDTH;
+    boids[j].location.x = WIDTH + WIDTH - 2 - boids[j].location.x;
+    boids[j].velocity.x = -boids[j].velocity.x;
+  }
+  if (boids[j].location.y < 0){
+    //boids[j].location.y = HEIGHT - 1 + boids[j].location.y;
+    boids[j].location.y = -boids[j].location.y;
+    boids[j].velocity.y = -boids[j].velocity.y;
+  }
+  if (boids[j].location.y > HEIGHT - 1){
+    //boids[j].location.y = boids[j].location.y + 1 - HEIGHT;
+    boids[j].location.y = HEIGHT + HEIGHT - 2 - boids[j].location.y;
+    boids[j].velocity.y = -boids[j].velocity.y;
+  }
+}
+
+void fountainsEmit(uint8_t i){
+  if (hue++ & 0x01)
+    hue2++;//counter++;
+
+  uint8_t j = random8(enlargedObjectNUM);
+  fountainsDrift(j);
+  trackingObjectPosX[i] = boids[j].location.x;
+  trackingObjectPosY[i] = boids[j].location.y;
+
+  trackingObjectSpeedX[i] = ((float)random8()-127.)/512.; // random(_hVar)-_constVel; // particle->vx
+  trackingObjectSpeedY[i] = sqrt(0.0626-trackingObjectSpeedX[i]*trackingObjectSpeedX[i]); // sqrt(pow(_constVel,2)-pow(trackingObjectSpeedX[i],2)); // particle->vy зависит от particle->vx - не ошибка
+  if(random8(2U)) { trackingObjectSpeedY[i]=-trackingObjectSpeedY[i]; }
+  trackingObjectState[i] = random8(50, 250); // random8(minLife, maxLife);// particle->ttl
+  if (modes[currentMode].Speed & 0x01)
+    trackingObjectHue[i] = hue2;// (counter/2)%255; // particle->hue
+  else
+    trackingObjectHue[i] = boids[j].colorIndex;//random8();
+  trackingObjectIsShift[i] = true; // particle->isAlive
+}
+
+void fountainsRoutine(){
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    enlargedObjectNUM = (modes[currentMode].Scale - 1U) / 99.0 * (AVAILABLE_BOID_COUNT - 1U) + 1U;
+    if (enlargedObjectNUM > AVAILABLE_BOID_COUNT) enlargedObjectNUM = AVAILABLE_BOID_COUNT;
+    
+    //deltaValue = 10; // количество зарождающихся частиц за 1 цикл
+    deltaValue = trackingOBJECT_MAX_COUNT / (sqrt3(CENTER_X_MAJOR*CENTER_X_MAJOR + CENTER_Y_MAJOR*CENTER_Y_MAJOR) * 4U) + 1U; // 4 - это потому что за 1 цикл частица пролетает ровно четверть расстояния между 2мя соседними пикселями
+    for(int i = 0; i<trackingOBJECT_MAX_COUNT; i++)
+      trackingObjectIsShift[i] = false;
+    
+    for(int j = 0; j<enlargedObjectNUM; j++){
+      boids[j] = Boid(random8(WIDTH), random8(HEIGHT));
+      //boids[j].location.x = random8(WIDTH);
+      //boids[j].location.y = random8(HEIGHT);
+      boids[j].velocity.x = ((float)random8()-127.)/512.; 
+      boids[j].velocity.y = sqrt(0.0626-boids[j].velocity.x*boids[j].velocity.x) /  8.; // скорость источников в восемь раз ниже, чем скорость частиц
+      boids[j].velocity.x                                                        /= 8.; // скорость источников в восемь раз ниже, чем скорость частиц
+      if(random8(2U)) 
+        boids[j].velocity.y = -boids[j].velocity.y;
+      boids[j].colorIndex = random8();
+    }
+  }
+  step = deltaValue; //счётчик количества частиц в очереди на зарождение в этом цикле
+  dimAll(127);
+
+  //go over particles and update matrix cells on the way
+  for(int i = 0; i<trackingOBJECT_MAX_COUNT; i++) {
+    if (!trackingObjectIsShift[i] && step) {
+      //emitter->emit(&particles[i], this->g);
+      fountainsEmit(i);
+      step--;
+    }
+    if (trackingObjectIsShift[i]){ // particle->isAlive
+      //particles[i].update(this->g);
+      particlesUpdate2(i);
+
+      //generate RGB values for particle
+      CRGB baseRGB = CHSV(trackingObjectHue[i], 255,255); // particles[i].hue
+
+      //baseRGB.fadeToBlackBy(255-trackingObjectState[i]);
+      baseRGB.nscale8(trackingObjectState[i]);//эквивалент
+      drawPixelXYF(trackingObjectPosX[i], trackingObjectPosY[i], baseRGB);
+    }
+  }
+}
+*/
