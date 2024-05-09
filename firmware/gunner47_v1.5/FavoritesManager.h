@@ -6,6 +6,12 @@
 #define DEFAULT_FAVORITES_INTERVAL           (300U)         // значение по умолчанию для интервала переключения избранных эффектов в секундах
 #define DEFAULT_FAVORITES_DISPERSION         (0U)           // значение по умолчанию для разброса интервала переключения избранных эффектов в секундах
 
+#ifdef USE_SHUFFLE_FAVORITES // для режима последовательной смены эффектов будет такой массив (максимум поддерживается 255 эффектов)
+    //пытался прописать его в private: static bool isDeactFavorite[MODE_AMOUNT];, но компилироваться не захотело.
+    uint8_t shuffleFavoriteModes[MODE_AMOUNT];
+    uint8_t shuffleCurrentIndex = MODE_AMOUNT; // начальное значение увеличивается на 1 и затем сравнивается с MODE_AMOUNT, чтобы создать первоначальное перемешивание режимов
+#endif
+
 
 class FavoritesManager
 {
@@ -66,11 +72,14 @@ class FavoritesManager
       {
         FavoriteModes[i] = getModeOnOff(statusText, i);
       }
+#ifdef USE_SHUFFLE_FAVORITES //пускай список воспроизведения перемешается, раз список избранного изменился
+      shuffleCurrentIndex = MODE_AMOUNT;
+#endif
     }
 
     static bool HandleFavorites(                            // функция, обрабатывающая циклическое переключение избранных эффектов; возвращает true, если эффект был переключен
       bool* ONflag,
-      int8_t* currentMode,
+      uint8_t* currentMode,
       bool* loadingFlag
       #ifdef USE_NTP
       , bool* dawnFlag
@@ -146,7 +155,7 @@ class FavoritesManager
 
   private:
     static uint32_t nextModeAt;                             // ближайшее время переключения на следующий избранный эффект (millis())
-
+    
     static bool isStatusTextCorrect(const char* statusText) // валидирует statusText (проверяет, правильное ли количество компонентов он содержит)
     {
       char buff[MAX_UDP_BUFFER_SIZE];
@@ -253,11 +262,38 @@ class FavoritesManager
       return NULL;
     }
 
-    static int8_t getNextFavoriteMode(int8_t* currentMode)  // возвращает следующий (случайный) включенный в избранные эффект
+#ifdef USE_SHUFFLE_FAVORITES
+    static uint8_t getNextFavoriteMode(uint8_t* currentMode)  // возвращает следующий (случайный) включенный в избранные эффект
     {
-      int8_t result = *currentMode;
-
-      for (int8_t tryNo = 0; tryNo <= random(0, MODE_AMOUNT); tryNo++)// случайное количество попыток определения следующего эффекта; без этого будет выбран следующий (избранный) по порядку после текущего
+      uint8_t result;
+      uint8_t count = MODE_AMOUNT;// считаем в этом счётчике, есть ли вообще в наличии избранные режимы. хотя бы два
+      do {
+        shuffleCurrentIndex++;
+        if (shuffleCurrentIndex >= MODE_AMOUNT){        // если достигнут предел количества режимов
+          count = MODE_AMOUNT;// считаем в этом счётчике, есть ли вообще в наличии избранные режимы, кроме одного
+          for (uint8_t i = 0; i < MODE_AMOUNT; i++){    // перемешиваем режимы
+            //swap(shuffleFavoriteModes[i], shuffleFavoriteModes[random8(MODE_AMOUNT)]); одной строчкой не получилось поменять местами
+            uint8_t j = random8(MODE_AMOUNT);
+            result = shuffleFavoriteModes[i];
+            shuffleFavoriteModes[i] = shuffleFavoriteModes[j];
+            shuffleFavoriteModes[j] = result;
+            if (FavoriteModes[i] == 0) // заодно считаем, вдруг нет избранных режимов, кроме одного
+              count--;
+          }
+          shuffleCurrentIndex = 0;
+        }
+      } while ((FavoriteModes[shuffleFavoriteModes[shuffleCurrentIndex]] == 0U || shuffleFavoriteModes[shuffleCurrentIndex] == *currentMode) && count > 1U);
+      if (count > 1U)
+        result = shuffleFavoriteModes[shuffleCurrentIndex];
+      else
+        result = *currentMode + 1U < MODE_AMOUNT ? *currentMode + 1U : 0U;
+      return result;
+    }
+#else
+    static uint8_t getNextFavoriteMode(uint8_t* currentMode)  // возвращает следующий (случайный) включенный в избранные эффект
+    {
+      uint8_t result = *currentMode;
+      for (uint8_t tryNo = 0; tryNo <= random(0, MODE_AMOUNT); tryNo++)// случайное количество попыток определения следующего эффекта; без этого будет выбран следующий (избранный) по порядку после текущего
       {
         for (uint8_t i = (result + 1); i <= (result + MODE_AMOUNT); i++)
         {
@@ -268,9 +304,9 @@ class FavoritesManager
           }
         }        
       }
-
       return result;
     }
+#endif
 
     static uint32_t getNextTime()                           // определяет время следующего переключения на следующий избранный эффект
     {

@@ -1,6 +1,10 @@
 // ============= ЭФФЕКТЫ ===============
 
-// пара общих для нескольких эффектов буферов
+// несколько общих для нескольких эффектов переменных и буферов
+uint8_t hue, hue2; // постепенный сдвиг оттенка или какой-нибудь другой цикличный счётчик
+uint8_t deltaHue, deltaHue2; // ещё пара таких же, когда нужно много
+uint8_t step; // какой-нибудь счётчик кадров или постедовательностей операций
+uint8_t deltaValue; // просто повторно используемая переменная
 CRGB ledsbuff[NUM_LEDS];
 #define NUM_LAYERSMAX 2
 uint8_t noise3d[NUM_LAYERSMAX][WIDTH][HEIGHT];
@@ -24,10 +28,9 @@ void blurScreen(fract8 blur_amount, CRGB *LEDarray = leds)
 const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
 const TProgmemRGBPalette16 *curPalette = palette_arr[0];
 void setCurrentPallete(){
-      if (modes[currentMode].Scale > 100) modes[currentMode].Scale = 100; // чтобы не было проблем при прошивке без очистки памяти
-      curPalette = palette_arr[(int)((float)modes[currentMode].Scale/100*((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1U))];
+      if (modes[currentMode].Scale > 100U) modes[currentMode].Scale = 100U; // чтобы не было проблем при прошивке без очистки памяти
+      curPalette = palette_arr[(uint8_t)(modes[currentMode].Scale/100.0F*((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-0.01F))];
 }
-
 
 // ------------- конфетти --------------
 #define FADE_OUT_SPEED        (70U)                         // скорость затухания
@@ -135,9 +138,9 @@ void fire2012WithPalette() {
 #define UNIVERSE_FIRE                                  // универсальный огонь 2-в-1 Цветной+Белый
 
 uint8_t pcnt = 0U;
-uint8_t deltaHue = 16U;                                // текущее смещение пламени (hueMask)
+//uint8_t deltaHue = 16U;                                // текущее смещение пламени (hueMask) - переменная вынесена в общий пул, чтобы использовать повторно
 uint8_t shiftHue[HEIGHT];                              // массив дороожки горизонтального смещения пламени (hueMask)
-uint8_t deltaValue = 16U;                              // текущее смещение пламени (hueValue)
+//uint8_t deltaValue = 16U;                              // текущее смещение пламени (hueValue) - переменная вынесена в общий пул, чтобы использовать повторно
 uint8_t shiftValue[HEIGHT];                            // массив дороожки горизонтального смещения пламени (hueValue)
 
 //these values are substracetd from the generated values to give a shape to the animation
@@ -290,7 +293,6 @@ void drawFrame(uint8_t pcnt, bool isColored) {                  // прорис�
 }
 
 // ------------- радуга вертикальная ----------------
-uint8_t hue;
 void rainbowVerticalRoutine()
 {
   hue += 4;
@@ -339,7 +341,7 @@ void rainbowDiagonalRoutine()
   }
 }
 
-// -------------- цвета (смена цвета) + эффект пульс ------------
+// -------------- эффект пульс ------------
 // Stefan Petrick's PULSE Effect mod by PalPalych for GyverLamp
 
 void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color) {
@@ -373,15 +375,14 @@ void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color) {
 
 CRGBPalette16 palette;
 CRGB _pulse_color;
-uint8_t step;
 uint8_t currentRadius = 4;
-uint8_t centerX = random8(WIDTH - 5U) + 3U;
-uint8_t centerY = random8(HEIGHT - 5U) + 3U;
-uint16_t _rc;
-uint8_t _pulse_hue;
-uint8_t _pulse_hueall;
-uint8_t _pulse_delta;
-uint8_t pulse_hue;
+uint8_t pulse_centerX = random8(WIDTH - 5U) + 3U;
+uint8_t pulse_centerY = random8(HEIGHT - 5U) + 3U;
+//uint16_t _rc; вроде, не используется
+//uint8_t _pulse_hue; заменено на deltaHue из общих переменных
+//uint8_t _pulse_hueall; заменено на hue2 из общих переменных
+//uint8_t _pulse_delta; заменено на deltaHue2 из общих переменных
+//uint8_t pulse_hue; заменено на hue из общих переменных
 
 void pulseRoutine(uint8_t PMode) {
     palette = RainbowColors_p;
@@ -395,49 +396,49 @@ void pulseRoutine(uint8_t PMode) {
         uint8_t _dark = qmul8( 2U, cos8 (128U / (step + 1U) * (i + 1U))) ;
         switch (PMode) {
           case 1U:                    // 1 - случайные диски
-            _pulse_hue = pulse_hue;
-            _pulse_color = CHSV(_pulse_hue, 255U, _dark);
+            deltaHue = hue;
+            _pulse_color = CHSV(deltaHue, 255U, _dark);
             break;
           case 2U:                    // 2...17 - перелив цвета дисков
-            _pulse_delta = modes[currentMode].Scale;
-            _pulse_color = CHSV(_pulse_hueall, 255U, _dark);
+            deltaHue2 = modes[currentMode].Scale;
+            _pulse_color = CHSV(hue2, 255U, _dark);
             break;
           case 3U:                    // 18...33 - выбор цвета дисков
-            _pulse_hue = modes[currentMode].Scale * 2.55;
-            _pulse_color = CHSV(_pulse_hue, 255U, _dark);
+            deltaHue = modes[currentMode].Scale * 2.55;
+            _pulse_color = CHSV(deltaHue, 255U, _dark);
             break;
           case 4U:                    // 34...50 - дискоцветы
-            _pulse_hue += modes[currentMode].Scale;
-            _pulse_color = CHSV(_pulse_hue, 255U, _dark);
+            deltaHue += modes[currentMode].Scale;
+            _pulse_color = CHSV(deltaHue, 255U, _dark);
             break;
           case 5U:                    // 51...67 - пузыри цветы
             _sat =  qsub8( 255U, cos8 (128U / (step + 1U) * (i + 1U))) ;
-            _pulse_hue += modes[currentMode].Scale;
-            _pulse_color = CHSV(_pulse_hue, _sat, _dark);
+            deltaHue += modes[currentMode].Scale;
+            _pulse_color = CHSV(deltaHue, _sat, _dark);
             break;
           case 6U:                    // 68...83 - выбор цвета пузырей
             _sat =  qsub8( 255U, cos8 (128U / (step + 1U) * (i + 1U))) ;
-            _pulse_hue = modes[currentMode].Scale * 2.55;
-            _pulse_color = CHSV(_pulse_hue, _sat, _dark);
+            deltaHue = modes[currentMode].Scale * 2.55;
+            _pulse_color = CHSV(deltaHue, _sat, _dark);
             break;
           case 7U:                    // 84...99 - перелив цвета пузырей
             _sat =  qsub8( 255U, cos8 (128U / (step + 1U) * (i + 1U))) ;
-            _pulse_delta = modes[currentMode].Scale;
-            _pulse_color = CHSV(_pulse_hueall, _sat, _dark);
+            deltaHue2 = modes[currentMode].Scale;
+            _pulse_color = CHSV(hue2, _sat, _dark);
             break;
           case 8U:                    // 100 - случайные пузыри
             _sat =  qsub8( 255U, cos8 (128U / (step + 1U) * (i + 1U))) ;
-            _pulse_hue = pulse_hue;
-            _pulse_color = CHSV(_pulse_hue, _sat, _dark);
+            deltaHue = hue;
+            _pulse_color = CHSV(deltaHue, _sat, _dark);
             break;
         }
-        drawCircle(centerX, centerY, i, _pulse_color  );
+        drawCircle(pulse_centerX, pulse_centerY, i, _pulse_color  );
       }
     } else {
-      centerX = random8(WIDTH - 5U) + 3U;
-      centerY = random8(HEIGHT - 5U) + 3U;
-      _pulse_hueall += _pulse_delta;
-      pulse_hue = random8(0U, 255U);
+      pulse_centerX = random8(WIDTH - 5U) + 3U;
+      pulse_centerY = random8(HEIGHT - 5U) + 3U;
+      hue2 += deltaHue2;
+      hue = random8(0U, 255U);
       currentRadius = random8(3U, 9U);
       step = 0;
     }
@@ -1359,18 +1360,55 @@ void poolRoutine()
   }
 }
 
-// ------------- цвета -----------------
-void colorsRoutine()
+// ------------- цвета - 2 -----------------
+//#define SECONDS_DELAY (1U) // растягиваем задержку, регулируемую бегунком "Скорость" в указанное количество времени
+#define DELAY_MULTIPLIER (20U) //при задержке между кадрами примерно в 50 мс с этим множителем получится 1 с на единицу бегунка Скорость
+void colorsRoutine2()
 {
-  if (loadingFlag)
-  {
-    hue += modes[currentMode].Scale;
-
-    for (uint16_t i = 0U; i < NUM_LEDS; i++)
-    {
-      leds[i] = CHSV(hue, 255U, 255U);
-    }
+  if (loadingFlag) {
+    loadingFlag = false;
+    deltaValue = 255U - modes[currentMode].Speed + 1U;
+    step = deltaValue; // чтообы при старте эффекта сразу покрасить лампу (для бугунка Масштаб от 246 до 9)
+    deltaHue = 1U;     // чтообы при старте эффекта сразу покрасить лампу (для бегунка Масштаб от 10 до 245)
+    hue2 = 0U;
   }
+
+  if (modes[currentMode].Scale < 10U || modes[currentMode].Scale > 245U) // если Масштаб небольшой, меняем цвет на это значение регулярно (каждый цикл кратный значению Скорость)
+    if (step >= deltaValue){
+      hue += modes[currentMode].Scale;
+      step = 0U;
+      for (uint16_t i = 0U; i < NUM_LEDS; i++)
+        leds[i] = CHSV(hue, 255U, 255U);
+    }
+    else
+      step++;
+  else                                                                   // если Масштаб большой, тогда смену цвета делаем как бы пульсацией (поменяли, пауза, поменяли, пауза)
+    if (deltaHue != 0){
+      if (deltaHue > 127U) {
+        hue--;
+        deltaHue++;
+      }
+      else {
+        hue++;
+        deltaHue--;
+      }
+      for (uint16_t i = 0U; i < NUM_LEDS; i++)
+        leds[i] = CHSV(hue, 255U, 255U);
+    }
+    else
+      if (step >= deltaValue){
+        deltaHue = modes[currentMode].Scale;
+        step = 0U;
+      }
+      else
+//        EVERY_N_SECONDS(SECONDS_DELAY){   // не компилируется такое, блин
+//        EVERY_N_MILLIS(12) {              // и такое тоже
+        if (hue2 >= DELAY_MULTIPLIER) {
+          step++;
+          hue2 = 0U;
+        }
+        else 
+          hue2++;
 }
 
 // ------------- цвет ------------------
@@ -1411,121 +1449,52 @@ void snowRoutine()
   }
 }
 
-// ------------- метель -------------
-#define SNOW_DENSE            (60U)                         // плотность снега
-#define SNOW_TAIL_STEP        (100U)                        // длина хвоста
-#define SNOW_SATURATION       (0U)                          // насыщенность (от 0 до 255)
-void snowStormRoutine()
+
+// ------------- метель - 2 -------------
+//SNOWSTORM / МЕТЕЛЬ # STARFALL / ЗВЕЗДОПАД ***** V1.2
+// v1.0 - Updating for GuverLamp v1.7 by PalPalych 12.03.2020
+// v1.1 - Fix wrong math & full screen drawing by PalPalych 14.03.2020
+// v1.2 - Code optimisation + pseudo 3d by PalPalych 21.04.2020
+#define e_sns_DENSE (32U) // плотность снега - меньше = плотнее
+
+void stormRoutine2(bool isColored)
 {
-  if (loadingFlag)
+  // заполняем головами комет
+  uint8_t Saturation = 0U;    // цвет хвостов
+  uint8_t e_TAIL_STEP = 127U; // длина хвоста
+  if (isColored)
+    Saturation = modes[currentMode].Scale * 2.55;
+  else
   {
-    loadingFlag = false;
-    FastLED.clear();
+    e_TAIL_STEP = 255U - modes[currentMode].Scale * 2.55;
   }
-
-  // заполняем головами комет левую и верхнюю линию
-  //  for (uint8_t i = HEIGHT / 2U; i < HEIGHT; i++)
-  //  {
-  //    if (getPixColorXY(0U, i) == 0U &&
-  //       (random(0, SNOW_DENSE) == 0) &&
-  //        getPixColorXY(0U, i + 1U) == 0U &&
-  //        getPixColorXY(0U, i - 1U) == 0U)
-  //    {
-  //      leds[XY(0U, i)] = CHSV(random(0, 200), SNOW_SATURATION, 255U);
-  //    }
-  //  }
-
-  //  for (uint8_t i = 0U; i < WIDTH / 2U; i++)
-  for (uint8_t i = 0U; i < WIDTH; i++)
+  for (int8_t x = 0U; x < WIDTH - 1U; x++) // fix error i != 0U
   {
-    if (getPixColorXY(i, HEIGHT - 1U) == 0U &&
-        (random(0, map(modes[currentMode].Scale, 0U, 255U, 10U, 120U)) == 0U) &&
-        getPixColorXY(i + 1U, HEIGHT - 1U) == 0U &&
-        getPixColorXY(i - 1U, HEIGHT - 1U) == 0U)
+    if (!random8(e_sns_DENSE) &&
+        !getPixColorXY(wrapX(x), HEIGHT - 1U) &&
+        !getPixColorXY(wrapX(x + 1U), HEIGHT - 1U) &&
+        !getPixColorXY(wrapX(x - 1U), HEIGHT - 1U))
     {
-      leds[XY(i, HEIGHT - 1U)] = CHSV(random(0, 200), SNOW_SATURATION, 255U);
+      drawPixelXY(x, HEIGHT - 1U, CHSV(random8(), Saturation, random8(64U, 255U)));
     }
   }
 
   // сдвигаем по диагонали
-  for (uint8_t y = 0U; y < HEIGHT - 1U; y++)
+  for (int8_t y = 0U; y < HEIGHT - 1U; y++)
   {
-    for (uint8_t x = WIDTH - 1U; x > 0U; x--)
+    for (int8_t x = 0; x < WIDTH; x++)
     {
-      drawPixelXY(x, y, getPixColorXY(x - 1U, y + 1U));
+      drawPixelXY(wrapX(x + 1U), y, getPixColorXY(x, y + 1U));
     }
-    drawPixelXY(0, y, getPixColorXY(WIDTH - 1U, y + 1U));
   }
 
-  // уменьшаем яркость левой и верхней линии, формируем "хвосты"
-  //  for (uint8_t i = HEIGHT / 2U; i < HEIGHT; i++)
-  //  {
-  //    fadePixel(0U, i, SNOW_TAIL_STEP);
-  //  }
-  for (uint8_t i = 0U; i < WIDTH; i++)
-    //  for (uint8_t i = 0U; i < WIDTH / 2U; i++)
+  // уменьшаем яркость верхней линии, формируем "хвосты"
+  for (int8_t i = 0U; i < WIDTH; i++)
   {
-    fadePixel(i, HEIGHT - 1U, SNOW_TAIL_STEP);
+    fadePixel(i, HEIGHT - 1U, e_TAIL_STEP);
   }
 }
 
-// ------------- звездопад -------------
-#define STAR_DENSE            (60U)                         // плотность комет
-#define STAR_TAIL_STEP        (100U)                        // длина хвоста кометы
-#define STAR_SATURATION       (150U)                        // насыщенность кометы (от 0 до 255)
-void starfallRoutine()
-{
-  if (loadingFlag)
-  {
-    loadingFlag = false;
-    FastLED.clear();
-  }
-
-  // заполняем головами комет левую и верхнюю линию
-  //  for (uint8_t i = HEIGHT / 2U; i < HEIGHT; i++)
-  //  {
-  //    if (getPixColorXY(0U, i) == 0U &&
-  //       (random(0, STAR_DENSE) == 0) &&
-  //        getPixColorXY(0U, i + 1U) == 0U &&
-  //        getPixColorXY(0U, i - 1U) == 0U)
-  //    {
-  //      leds[XY(0U, i)] = CHSV(random(0, 200), STAR_SATURATION, 255U);
-  //    }
-  //  }
-
-  //  for (uint8_t i = 0U; i < WIDTH / 2U; i++)
-  for (uint8_t i = 0U; i < WIDTH; i++)
-  {
-    if (getPixColorXY(i, HEIGHT - 1U) == 0U &&
-        (random(0, map(modes[currentMode].Scale, 0U, 255U, 10U, 120U)) == 0U) &&
-        getPixColorXY(i + 1U, HEIGHT - 1U) == 0U &&
-        getPixColorXY(i - 1U, HEIGHT - 1U) == 0U)
-    {
-      leds[XY(i, HEIGHT - 1U)] = CHSV(random(0, 200), STAR_SATURATION, 255U);
-    }
-  }
-
-  // сдвигаем по диагонали
-  for (uint8_t y = 0U; y < HEIGHT - 1U; y++)
-  {
-    for (uint8_t x = WIDTH - 1U; x > 0U; x--)
-    {
-      drawPixelXY(x, y, getPixColorXY(x - 1U, y + 1U));
-    }
-    drawPixelXY(0U, y, getPixColorXY(WIDTH - 1U, y + 1U));
-  }
-
-  // уменьшаем яркость левой и верхней линии, формируем "хвосты"
-  //  for (uint8_t i = HEIGHT / 2U; i < HEIGHT; i++)
-  //  {
-  //    fadePixel(0U, i, STAR_TAIL_STEP);
-  //  }
-  //  for (uint8_t i = 0U; i < WIDTH / 2U; i++)
-  for (uint8_t i = 0U; i < WIDTH; i++)
-  {
-    fadePixel(i, HEIGHT - 1U, STAR_TAIL_STEP);
-  }
-}
 
 // ------------- матрица ---------------
 void matrixRoutine()
@@ -2377,6 +2346,7 @@ if (x2<WIDTH && y2<HEIGHT) // добавил проверки. не знаю, п
 }
 
 // --------------------------- эффект МетаБолз ----------------------
+// https://gist.github.com/StefanPetrick/170fbf141390fafb9c0c76b8a0d34e54
 // Stefan Petrick's MetaBalls Effect mod by PalPalych for GyverLamp 
 /*
   Metaballs proof of concept by Stefan Petrick (mod by Palpalych for GyverLamp 27/02/2020)
@@ -2385,6 +2355,12 @@ if (x2<WIDTH && y2<HEIGHT) // добавил проверки. не знаю, п
   https://www.gamedev.net/articles/programming/graphics/exploring-metaballs-and-isosurfaces-in-2d-r2556
 */
 void MetaBallsRoutine() {
+    if (loadingFlag)
+    {
+      loadingFlag = false;
+      setCurrentPallete();
+    }
+      
   float speed = modes[currentMode].Speed / 127.0;
 
   // get some 2 random moving points
@@ -2416,13 +2392,20 @@ void MetaBallsRoutine() {
       dist += sqrt((dx * dx) + (dy * dy));
 
       // inverse result
-      byte color = modes[currentMode].Speed * 10 / dist;
+      //byte color = modes[currentMode].Speed * 10 / dist;
+      byte color = 1000U / dist;
 
       // map color between thresholds
       if (color > 0 and color < 60) {
-        drawPixelXY(x, y, CHSV(color * 9, 255, 255));
+        if (modes[currentMode].Scale == 100U)
+          drawPixelXY(x, y, CHSV(color * 9, 255, 255));// это оригинальный цвет эффекта
+        else
+          drawPixelXY(x, y, ColorFromPalette(*curPalette, color * 9));
       } else {
-        drawPixelXY(x, y, CHSV(0, 255, 255));
+        if (modes[currentMode].Scale == 100U)
+          drawPixelXY(x, y, CHSV(0, 255, 255)); // в оригинале центральный глаз почему-то крвсный
+        else
+          drawPixelXY(x, y, ColorFromPalette(*curPalette, 0U));
       }
       // show the 3 points, too
       drawPixelXY(x1, y1, CRGB(255, 255, 255));
@@ -2555,7 +2538,7 @@ void RainRoutine()
     CRGB thisColor = getPixColorXY(x, HEIGHT - 1U);
     if ((uint32_t)thisColor == 0U)
     {
-     if (random(0, 50) == 0U)
+     if (random8(0, 50) == 0U)
       {
       if (modes[currentMode].Scale==1) drawPixelXY(x, HEIGHT - 1U, CHSV(random(0, 9) * 28, 255U, 255U)); // Радужный дождь
       else
@@ -3065,7 +3048,7 @@ class Boid {
     }
 };
 
-static const uint8_t AVAILABLE_BOID_COUNT = 20;
+static const uint8_t AVAILABLE_BOID_COUNT = 20U;
 Boid boids[AVAILABLE_BOID_COUNT]; 
 
     static const int boidCount = 10;
@@ -3451,10 +3434,10 @@ void fire2012again()
     loadingFlag = false;
     if (modes[currentMode].Scale > 100) modes[currentMode].Scale = 100; // чтобы не было проблем при прошивке без очистки памяти
     if (modes[currentMode].Scale > 50) 
-      fire_p = firePalettes[(int)((modes[currentMode].Scale % 50)/5.56)];
+      fire_p = firePalettes[(uint8_t)((modes[currentMode].Scale % 50)/5.56F)];
       //fire_p = firePalettes[(int)((float)modes[currentMode].Scale/12)];
     else
-      curPalette = palette_arr[(int)((float)modes[currentMode].Scale/50*((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1U))];
+      curPalette = palette_arr[(uint8_t)(modes[currentMode].Scale/50.0F*((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-0.01F))];
   }
   
 #if HEIGHT/6 > 6
@@ -3487,7 +3470,7 @@ void fire2012again()
     }
 
     // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
-    if (random(255) < sparking) {
+    if (random8() < sparking) {
       int j = random(FIRE_BASE);
       noise3d[0][x][j] = qadd8(noise3d[0][x][j], random(160, 255));
     }
@@ -3558,7 +3541,7 @@ void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLen
     }
 
     // Step 2.  Randomly spawn new dots at top
-    if (random(255) < spawnFreq) {
+    if (random8() < spawnFreq) {
       noise3d[0][x][HEIGHT-1] = random(backgroundDepth, maxBrightness);
     }
 
@@ -3633,15 +3616,17 @@ void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLen
     // Step 6. Add clouds if called for
     if (clouds) {
       uint16_t noiseScale = 250;  // A value of 1 will be so zoomed in, you'll mostly see solid colors. A value of 4011 will be very zoomed out and shimmery
-      const uint16_t cloudHeight = (HEIGHT*0.2)+1;
+      //const uint16_t cloudHeight = (HEIGHT*0.2)+1;
+      const uint8_t cloudHeight = HEIGHT * 0.4 + 1; // это уже 40% c лишеним, но на высоких матрицах будет чуть меньше
 
       // This is the array that we keep our computed noise values in
       //static uint8_t noise[WIDTH][cloudHeight];
       static uint8_t *noise = (uint8_t *) malloc(WIDTH * cloudHeight);
+      
       while (noise == NULL) { Serial.println("noise malloc failed"); }
       int xoffset = noiseScale * x + hue;
 
-      for(int z = 0; z < cloudHeight; z++) {
+      for(uint8_t z = 0; z < cloudHeight; z++) {
         int yoffset = noiseScale * z - hue;
         uint8_t dataSmoothing = 192;
         uint8_t noiseData = qsub8(inoise8(noiseX + xoffset,noiseY + yoffset,noiseZ),16);
@@ -3688,4 +3673,58 @@ void stormyRain()
   // ( Depth of dots, maximum brightness, frequency of new dots, length of tails, color, splashes, clouds, ligthening )
   //rain(0, 90, map8(intensity,0,150)+60, 10, solidRainColor, true, true, true);
   rain(60, 160, (modes[currentMode].Scale-1) * 2.58, 30, solidRainColor, true, true, true);
+}
+
+// ------------------------------ ЭФФЕКТ МЕРЦАНИЕ ----------------------
+// (c) SottNick
+
+#define TWINKLES_SPEEDS 4     // всего 4 варианта скоростей мерцания
+#define TWINKLES_MULTIPLIER 6 // слишком медленно, если на самой медленной просто по единичке к яркости добавлять
+
+void twinklesRoutine(){
+    if (loadingFlag)
+    {
+      loadingFlag = false;
+      setCurrentPallete();
+      hue = 0U;
+      for (uint32_t idx=0; idx < NUM_LEDS; idx++) {
+        if (random8(modes[currentMode].Scale % 11U) == 0){
+          ledsbuff[idx].r = random8();                          // оттенок пикселя
+          ledsbuff[idx].g = random8(1, TWINKLES_SPEEDS * 2 +1); // скорость и направление (нарастает 1-4 или угасает 5-8)
+          ledsbuff[idx].b = random8();                          // яркость
+        }
+        else
+          ledsbuff[idx] = 0;                                    // всё выкл
+      }
+    }
+    for (uint32_t idx=0; idx < NUM_LEDS; idx++) {
+      if (ledsbuff[idx].b == 0){
+        if (random8(modes[currentMode].Scale % 11U) == 0 && hue > 0){  // если пиксель ещё не горит, зажигаем каждый ХЗй
+          ledsbuff[idx].r = random8();                          // оттенок пикселя
+          ledsbuff[idx].g = random8(1, TWINKLES_SPEEDS +1);     // скорость и направление (нарастает 1-4, но не угасает 5-8)
+          ledsbuff[idx].b = ledsbuff[idx].g;                    // яркость
+          hue--; // уменьшаем количество погасших пикселей
+        }
+      }
+      else if (ledsbuff[idx].g <= TWINKLES_SPEEDS){             // если нарастание яркости
+        if (ledsbuff[idx].b > 255U - ledsbuff[idx].g - TWINKLES_MULTIPLIER){            // если досигнут максимум
+          ledsbuff[idx].b = 255U;
+          ledsbuff[idx].g = ledsbuff[idx].g + TWINKLES_SPEEDS;
+        }
+        else
+          ledsbuff[idx].b = ledsbuff[idx].b + ledsbuff[idx].g + TWINKLES_MULTIPLIER;
+      }
+      else {                                                    // если угасание яркости
+        if (ledsbuff[idx].b <= ledsbuff[idx].g - TWINKLES_SPEEDS + TWINKLES_MULTIPLIER){// если досигнут минимум
+          ledsbuff[idx].b = 0;                                  // всё выкл
+          hue++; // считаем количество погасших пикселей
+        }
+        else
+          ledsbuff[idx].b = ledsbuff[idx].b - ledsbuff[idx].g + TWINKLES_SPEEDS - TWINKLES_MULTIPLIER;
+      }
+      if (ledsbuff[idx].b == 0)
+        leds[idx] = 0U;
+      else
+        leds[idx] = ColorFromPalette(*curPalette, ledsbuff[idx].r, ledsbuff[idx].b);
+    }
 }

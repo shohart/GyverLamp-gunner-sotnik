@@ -46,7 +46,7 @@ void buttonTick()
   // двухкратное нажатие
   if (ONflag && clickCount == 2U)
   {
-    if (++currentMode >= (int8_t)MODE_AMOUNT) currentMode = 0;
+    if (++currentMode >= MODE_AMOUNT) currentMode = 0;
     FastLED.setBrightness(modes[currentMode].Brightness);
     loadingFlag = true;
     settChanged = true;
@@ -66,7 +66,7 @@ void buttonTick()
   // трёхкратное нажатие
   if (ONflag && clickCount == 3U)
   {
-    if (--currentMode < 0) currentMode = MODE_AMOUNT - 1;
+    if (--currentMode >= MODE_AMOUNT) currentMode = MODE_AMOUNT - 1;
     FastLED.setBrightness(modes[currentMode].Brightness);
     loadingFlag = true;
     settChanged = true;

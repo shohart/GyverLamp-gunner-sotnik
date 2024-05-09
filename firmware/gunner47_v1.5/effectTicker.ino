@@ -17,78 +17,79 @@ void effectsTick()
   if (!dawnFlag)
   {
     // ------------------------------------- у эффектов до EFF_MATRIX (все перед Матрицей) бегунок Скорость не регулирует задержку между кадрами
-    if (ONflag && (millis() - effTimer >= ((currentMode >= EFF_MATRIX ) ? 256U - modes[currentMode].Speed : (currentMode < 11U ) ? 50 : 15)))
+    if (ONflag && (millis() - effTimer >= ((currentMode >= EFF_MATRIX ) ? 256U - modes[currentMode].Speed : (currentMode < 12U ) ? 50 : 15)))
     {
       effTimer = millis();
       switch (currentMode)
       {
         case EFF_WHITE_COLOR:         whiteColorStripeRoutine();          break;  // ( 0U) Белый свет
         case EFF_COLOR:               colorRoutine();                     break;  // ( 1U) Цвет
-        case EFF_MADNESS:             madnessNoiseRoutine();              break;  // ( 2U) Безумие
-        case EFF_CLOUDS:              cloudsNoiseRoutine();               break;  // ( 3U) Облака
-        case EFF_LAVA:                lavaNoiseRoutine();                 break;  // ( 4U) Лава
-        case EFF_PLASMA:              plasmaNoiseRoutine();               break;  // ( 5U) Плазма
-        case EFF_RAINBOW:             rainbowNoiseRoutine();              break;  // ( 6U) Радуга 3D
-        case EFF_RAINBOW_STRIPE:      rainbowStripeNoiseRoutine();        break;  // ( 7U) Павлин
-        case EFF_ZEBRA:               zebraNoiseRoutine();                break;  // ( 8U) Зебра
-        case EFF_FOREST:              forestNoiseRoutine();               break;  // ( 9U) Лес
-        case EFF_OCEAN:               oceanNoiseRoutine();                break;  // (10U) Океан
-        case EFF_BBALLS:              BBallsRoutine(true);                break;  // (11U) Мячики
-        case EFF_BBALLS_WHITE:        BBallsRoutine(false);               break;  // (12U) Белые мячики
-        case EFF_BBALLS_TRACES:       BBallsRoutine(true);                break;  // (13U) Мячики со шлейфом
-        case EFF_SPIRO:               spiroRoutine();                     break;  // (14U) Спирали
-        case EFF_PRISMATA:            PrismataRoutine();                  break;  // (15U) Призмата
-        case EFF_FLOCK:               flockRoutine(false);                break;  // (16U) Стая
-        case EFF_FLOCK_N_PR:          flockRoutine(true);                 break;  // (17U) Стая и хищник
-        case EFF_SINUSOID3:           Sinusoid3Routine();                 break;  // (18U) Синусоид
-        case EFF_METABALLS:           MetaBallsRoutine();                 break;  // (19U) Метаболз
+        case EFF_COLORS:              colorsRoutine2();                   break;  // ( 2U) Смена цвета
+        case EFF_MADNESS:             madnessNoiseRoutine();              break;  // ( 3U) Безумие
+        case EFF_CLOUDS:              cloudsNoiseRoutine();               break;  // ( 4U) Облака
+        case EFF_LAVA:                lavaNoiseRoutine();                 break;  // ( 5U) Лава
+        case EFF_PLASMA:              plasmaNoiseRoutine();               break;  // ( 6U) Плазма
+        case EFF_RAINBOW:             rainbowNoiseRoutine();              break;  // ( 7U) Радуга 3D
+        case EFF_RAINBOW_STRIPE:      rainbowStripeNoiseRoutine();        break;  // ( 8U) Павлин
+        case EFF_ZEBRA:               zebraNoiseRoutine();                break;  // ( 9U) Зебра
+        case EFF_FOREST:              forestNoiseRoutine();               break;  // (10U) Лес
+        case EFF_OCEAN:               oceanNoiseRoutine();                break;  // (11U) Океан
+        case EFF_BBALLS:              BBallsRoutine(true);                break;  // (12U) Мячики
+        case EFF_BBALLS_WHITE:        BBallsRoutine(false);               break;  // (13U) Белые мячики
+        case EFF_BBALLS_TRACES:       BBallsRoutine(true);                break;  // (14U) Мячики со шлейфом
+        case EFF_SPIRO:               spiroRoutine();                     break;  // (15U) Спирали
+        case EFF_PRISMATA:            PrismataRoutine();                  break;  // (16U) Призмата
+        case EFF_FLOCK:               flockRoutine(false);                break;  // (17U) Стая
+        case EFF_FLOCK_N_PR:          flockRoutine(true);                 break;  // (18U) Стая и хищник
+        case EFF_SINUSOID3:           Sinusoid3Routine();                 break;  // (19U) Синусоид
+        case EFF_METABALLS:           MetaBallsRoutine();                 break;  // (20U) Метаболз
 
 
-        case EFF_MATRIX:              matrixRoutine();                    break;  // (20U) Матрица
-        case EFF_FIRE_2012:           fire2012again();                    break;  // (21U) Огонь 2012
-        case EFF_FIRE_2018:           Fire2018_2();                       break;  // (22U) Огонь 2018
-        case EFF_FIRE:                fireRoutine(true);                  break;  // (23U) Огонь
-        case EFF_FIRE_WHITTE:         fireRoutine(true);                  break;  // (24U) Белый огонь
-        case EFF_FIRE_GREEN:          fireRoutine(true);                  break;  // (25U) Цветной огонь
-        case EFF_WHIRL:               whirlRoutine(true);                 break;  // (26U) Вихри пламени
-        case EFF_WHIRL_MULTI:         whirlRoutine(false);                break;  // (27U) Разноцветные вихри
-        case EFF_WATERFALL:           fire2012WithPalette();              break;  // (28U) Водопад
-        case EFF_WATERFALL_WHITE:     fire2012WithPalette();              break;  // (29U) Белый водопад
-        case EFF_WATERFALL_4IN1:      fire2012WithPalette4in1();          break;  // (30U) Водопад 4 в 1
-        case EFF_POOL:                poolRoutine();                      break;  // (31U) Бассейн
-        case EFF_PULSE_SLOW:          pulseRoutine(2U);                   break;  // (32U) Медленный пульс
-        case EFF_PULSE_FAST:          pulseRoutine(1U);                   break;  // (33U) Быстрый пульс
-        case EFF_PULSE_RAINBOW:       pulseRoutine(4U);                   break;  // (34U) Радужный пульс
-        case EFF_PULSE_WHITE:         pulseRoutine(8U);                   break;  // (35U) Белый пульс
-        case EFF_COMET:               RainbowCometRoutine();              break;  // (36U) Комета
-        case EFF_COMET_WHITE:         ColorCometRoutine();                break;  // (37U) Белая комета
-        case EFF_COMET_COLOR:         ColorCometRoutine();                break;  // (38U) Одноцветная комета
-        case EFF_COMET_PULSING:       MultipleStream4();                  break;  // (39U) Пульсирующая комета
-        case EFF_COMET_TWO:           MultipleStream();                   break;  // (40U) Две кометы
-        case EFF_COMET_THREE:         MultipleStream2();                  break;  // (41U) Три кометы
+        case EFF_MATRIX:              matrixRoutine();                    break;  // (21U) Матрица
+        case EFF_FIRE_2012:           fire2012again();                    break;  // (22U) Огонь 2012
+        case EFF_FIRE_2018:           Fire2018_2();                       break;  // (23U) Огонь 2018
+        case EFF_FIRE:                fireRoutine(true);                  break;  // (24U) Огонь
+        case EFF_FIRE_WHITTE:         fireRoutine(true);                  break;  // (25U) Белый огонь
+        case EFF_FIRE_GREEN:          fireRoutine(true);                  break;  // (26U) Цветной огонь
+        case EFF_WHIRL:               whirlRoutine(true);                 break;  // (27U) Вихри пламени
+        case EFF_WHIRL_MULTI:         whirlRoutine(false);                break;  // (28U) Разноцветные вихри
+        case EFF_WATERFALL:           fire2012WithPalette();              break;  // (29U) Водопад
+        case EFF_WATERFALL_WHITE:     fire2012WithPalette();              break;  // (30U) Белый водопад
+        case EFF_WATERFALL_4IN1:      fire2012WithPalette4in1();          break;  // (31U) Водопад 4 в 1
+        case EFF_POOL:                poolRoutine();                      break;  // (32U) Бассейн
+        case EFF_PULSE_SLOW:          pulseRoutine(2U);                   break;  // (33U) Медленный пульс
+        case EFF_PULSE_FAST:          pulseRoutine(1U);                   break;  // (34U) Быстрый пульс
+        case EFF_PULSE_RAINBOW:       pulseRoutine(4U);                   break;  // (35U) Радужный пульс
+        case EFF_PULSE_WHITE:         pulseRoutine(8U);                   break;  // (36U) Белый пульс
+        case EFF_COMET:               RainbowCometRoutine();              break;  // (37U) Комета
+        case EFF_COMET_WHITE:         ColorCometRoutine();                break;  // (38U) Белая комета
+        case EFF_COMET_COLOR:         ColorCometRoutine();                break;  // (39U) Одноцветная комета
+        case EFF_COMET_PULSING:       MultipleStream4();                  break;  // (40U) Пульсирующая комета
+        case EFF_COMET_TWO:           MultipleStream();                   break;  // (41U) Две кометы
+        case EFF_COMET_THREE:         MultipleStream2();                  break;  // (42U) Три кометы
 
 
-        case EFF_FIREFLY:             MultipleStream3();                  break;  // (42U) Парящий огонь
-        case EFF_FIREFLY_TOP:         MultipleStream5();                  break;  // (43U) Верховой огонь
-        case EFF_SNAKE:               MultipleStream8();                  break;  // (44U) Радужный змей
-        case EFF_SPARKLES:            sparklesRoutine();                  break;  // (45U) Конфетти
-        case EFF_WAVES:               WaveRoutine();                      break;  // (46U) Волны
-        case EFF_SIMPLE_RAIN:         simpleRain();                       break;  // (47U) Тучка в банке
-        case EFF_STORMY_RAIN:         stormyRain();                       break;  // (48U) Гроза в банке
-        case EFF_COLOR_RAIN:          coloredRain();                      break;  // (49U) Осадки
-        case EFF_RAIN:                RainRoutine();                      break;  // (50U) Разноцветный дождь
-        case EFF_SNOW:                snowRoutine();                      break;  // (51U) Снегопад
-        case EFF_SNOWSTORM:           snowStormRoutine();                 break;  // (52U) Метель
-        case EFF_STARFALL:            starfallRoutine();                  break;  // (53U) Звездопад
-        case EFF_LIGHTERS:            lightersRoutine();                  break;  // (54U) Светлячки
-        case EFF_LIGHTER_TRACES:      ballsRoutine();                     break;  // (55U) Светлячки со шлейфом
-        case EFF_PAINTBALL:           lightBallsRoutine();                break;  // (56U) Пейнтбол
-        case EFF_RAINBOW_VER:         rainbowVerticalRoutine();           break;  // (57U) Радуга вертикальная
-        case EFF_RAINBOW_HOR:         rainbowHorizontalRoutine();         break;  // (58U) Радуга горизонтальная
-        case EFF_RAINBOW_DIAG:        rainbowDiagonalRoutine();           break;  // (59U) Радуга диагональная
-        case EFF_CUBE:                ballRoutine();                      break;  // (60U) Блуждающий кубик
-        case EFF_COLORS:              colorsRoutine();                    break;  // (61U) Смена цвета
-        case EFF_TEXT:                text_running();                     break;  // (62U) Бегущая строка
+        case EFF_FIREFLY:             MultipleStream3();                  break;  // (43U) Парящий огонь
+        case EFF_FIREFLY_TOP:         MultipleStream5();                  break;  // (44U) Верховой огонь
+        case EFF_SNAKE:               MultipleStream8();                  break;  // (45U) Радужный змей
+        case EFF_SPARKLES:            sparklesRoutine();                  break;  // (46U) Конфетти
+        case EFF_TWINKLES:            twinklesRoutine();                  break;  // (47U) Мерцание
+        case EFF_WAVES:               WaveRoutine();                      break;  // (48U) Волны
+        case EFF_SIMPLE_RAIN:         simpleRain();                       break;  // (49U) Тучка в банке
+        case EFF_STORMY_RAIN:         stormyRain();                       break;  // (50U) Гроза в банке
+        case EFF_COLOR_RAIN:          coloredRain();                      break;  // (51U) Осадки
+        case EFF_RAIN:                RainRoutine();                      break;  // (52U) Разноцветный дождь
+        case EFF_SNOW:                snowRoutine();                      break;  // (53U) Снегопад
+        case EFF_SNOWSTORM:           stormRoutine2(false);               break;  // (54U) Метель
+        case EFF_STARFALL:            stormRoutine2(true);                break;  // (55U) Звездопад
+        case EFF_LIGHTERS:            lightersRoutine();                  break;  // (56U) Светлячки
+        case EFF_LIGHTER_TRACES:      ballsRoutine();                     break;  // (57U) Светлячки со шлейфом
+        case EFF_PAINTBALL:           lightBallsRoutine();                break;  // (58U) Пейнтбол
+        case EFF_RAINBOW_VER:         rainbowVerticalRoutine();           break;  // (59U) Радуга вертикальная
+        case EFF_RAINBOW_HOR:         rainbowHorizontalRoutine();         break;  // (60U) Радуга горизонтальная
+        case EFF_RAINBOW_DIAG:        rainbowDiagonalRoutine();           break;  // (61U) Радуга диагональная
+        case EFF_CUBE:                ballRoutine();                      break;  // (62U) Блуждающий кубик
+        case EFF_TEXT:                text_running();                     break;  // (63U) Бегущая строка
       }
       FastLED.show();
     }
