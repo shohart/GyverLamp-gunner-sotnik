@@ -115,10 +115,7 @@ class FavoritesManager
         LOG.printf_P(PSTR("Переключение на следующий избранный режим: %d\n\n"), (*currentMode));
         #endif
         
-//        #ifdef USE_BLYNK короче, раз там нет управления избранным, то и это мы поддерживать не будем
-//        updateRemoteBlynkParams();
-//        #endif
-        
+      
         return true;
       }
 

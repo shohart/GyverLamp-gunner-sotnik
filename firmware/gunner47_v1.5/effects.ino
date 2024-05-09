@@ -5334,6 +5334,7 @@ void DNARoutine()
 }
 
 
+
 // ------------- Змейки --------------
 // (c) SottNick
 
@@ -6177,5 +6178,197 @@ void popcornRoutine() {
       drawPixelXYF(trackingObjectPosX[r], trackingObjectPosY[r], (modes[currentMode].Brightness & 0x01) ? 
                 CRGB::Gray 
               : ColorFromPalette(*curPalette, trackingObjectHue[r]));
+  }
+}
+
+// ============= Эффект Реакция Белоусова-Жаботинского (Осциллятор) ===============
+// по наводке https://www.wikiwand.com/ru/%D0%9A%D0%BB%D0%B5%D1%82%D0%BE%D1%87%D0%BD%D1%8B%D0%B9_%D0%B0%D0%B2%D1%82%D0%BE%D0%BC%D0%B0%D1%82
+// (c) SottNick
+
+void drawPixelXYFseamless(float x, float y, CRGB color)
+{
+  uint8_t xx = (x - (int)x) * 255, yy = (y - (int)y) * 255, ix = 255 - xx, iy = 255 - yy;
+  // calculate the intensities for each affected pixel
+  #define WU_WEIGHT(a,b) ((uint8_t) (((a)*(b)+(a)+(b))>>8))
+  uint8_t wu[4] = {WU_WEIGHT(ix, iy), WU_WEIGHT(xx, iy),
+                   WU_WEIGHT(ix, yy), WU_WEIGHT(xx, yy)};
+  // multiply the intensities by the colour, and saturating-add them to the pixels
+  for (uint8_t i = 0; i < 4; i++) {
+    uint8_t xn = (int8_t)(x + (i & 1)) % WIDTH;
+    uint8_t yn = (int8_t)(y + ((i >> 1) & 1)) % HEIGHT;
+    CRGB clr = getPixColorXY(xn, yn);
+    clr.r = qadd8(clr.r, (color.r * wu[i]) >> 8);
+    clr.g = qadd8(clr.g, (color.g * wu[i]) >> 8);
+    clr.b = qadd8(clr.b, (color.b * wu[i]) >> 8);
+    drawPixelXY(xn, yn, clr);
+  }
+}
+
+class oscillatingCell {
+public:
+  byte red;
+  byte blue;
+  byte green;
+  byte color;
+};
+oscillatingCell oscillatingWorld[WIDTH][HEIGHT];
+
+int redNeighbours(uint8_t x, uint8_t y) {
+  return (oscillatingWorld[(x + 1) % WIDTH][y].red) +
+         (oscillatingWorld[x][(y + 1) % HEIGHT].red) +
+         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][y].red) +
+         (oscillatingWorld[x][(y + HEIGHT - 1) % HEIGHT].red) +
+         (oscillatingWorld[(x + 1) % WIDTH][(y + 1) % HEIGHT].red) +
+         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + 1) % HEIGHT].red) +
+         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].red) +
+         (oscillatingWorld[(x + 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].red);
+    }
+
+int blueNeighbours(uint8_t x, uint8_t y) {
+  return (oscillatingWorld[(x + 1) % WIDTH][y].blue) +
+         (oscillatingWorld[x][(y + 1) % HEIGHT].blue) +
+         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][y].blue) +
+         (oscillatingWorld[x][(y + HEIGHT - 1) % HEIGHT].blue) +
+         (oscillatingWorld[(x + 1) % WIDTH][(y + 1) % HEIGHT].blue) +
+         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + 1) % HEIGHT].blue) +
+         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].blue) +
+         (oscillatingWorld[(x + 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].blue);
+    }
+    
+int greenNeighbours(uint8_t x, uint8_t y) {
+  return (oscillatingWorld[(x + 1) % WIDTH][y].green) +
+         (oscillatingWorld[x][(y + 1) % HEIGHT].green) +
+         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][y].green) +
+         (oscillatingWorld[x][(y + HEIGHT - 1) % HEIGHT].green) +
+         (oscillatingWorld[(x + 1) % WIDTH][(y + 1) % HEIGHT].green) +
+         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + 1) % HEIGHT].green) +
+         (oscillatingWorld[(x + WIDTH - 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].green) +
+         (oscillatingWorld[(x + 1) % WIDTH][(y + HEIGHT - 1) % HEIGHT].green);
+    }
+
+void setCellColors(uint8_t x, uint8_t y) {
+  oscillatingWorld[x][y].red = (oscillatingWorld[x][y].color == 0U);
+  oscillatingWorld[x][y].green = (oscillatingWorld[x][y].color == 1U);
+  oscillatingWorld[x][y].blue = (oscillatingWorld[x][y].color == 2U);
+}
+
+void oscillatingRoutine() {
+  if (loadingFlag) {
+    loadingFlag = false;
+    step = 0U;
+    //setCurrentPalette();
+    if (modes[currentMode].Scale > 100U) modes[currentMode].Scale = 100U; // чтобы не было проблем при прошивке без очистки памяти
+    if (modes[currentMode].Scale <= 50U) 
+      curPalette = palette_arr[(uint8_t)(modes[currentMode].Scale/50.0F * ((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-0.01F))];
+    //else
+      //curPalette = firePalettes[(uint8_t)((modes[currentMode].Scale - 50)/50.0F * ((sizeof(firePalettes)/sizeof(TProgmemRGBPalette16 *))-0.01F))];
+    
+    
+    //случайное заполнение
+    for (uint8_t i = 0; i < WIDTH; i++) {
+      for (uint8_t j = 0; j < HEIGHT; j++) {
+        oscillatingWorld[i][j].color = random8(3);
+        setCellColors(i, j);
+      }
+    }
+  }
+
+  hue++;
+  CRGB currColors[3];
+  if (modes[currentMode].Scale == 100U){
+    currColors[0U] = CHSV(hue, 255U, 255U);
+    currColors[1U] = CHSV(hue, 128U, 255U);
+    currColors[2U] = CHSV(hue, 255U, 128U);
+  }
+  else if (modes[currentMode].Scale > 50U){
+    //uint8_t temp = (modes[currentMode].Scale - 50U) * 1.275;
+    currColors[0U] = CHSV((modes[currentMode].Scale - 50U) * 5.1, 255U, 255U);
+    currColors[1U] = CHSV((modes[currentMode].Scale - 50U) * 5.1, 128U, 255U);
+    currColors[2U] = CHSV((modes[currentMode].Scale - 50U) * 5.1, 255U, 128U);
+  }
+  else
+    for (uint8_t c = 0; c < 3; c++)
+      currColors[c] = ColorFromPalette(*curPalette, c * 85U + hue);
+  FastLED.clear();
+  
+  // расчёт химической реакции и отрисовка мира
+  uint16_t colorCount[3] = {0U, 0U, 0U};  
+  for (uint8_t x = 0; x < WIDTH; x++) {
+      for (uint8_t y = 0; y < HEIGHT; y++) {
+          if (oscillatingWorld[x][y].red){
+             colorCount[0U]++;
+             if (greenNeighbours(x, y) > 2U)
+                oscillatingWorld[x][y].color = 1U;
+          }
+          else if (oscillatingWorld[x][y].green){
+             colorCount[1U]++;
+             if (blueNeighbours(x, y) > 2U)
+                oscillatingWorld[x][y].color = 2U;
+          }
+          else {//if (oscillatingWorld[x][y].blue){
+             colorCount[2U]++;
+             if (redNeighbours(x, y) > 2U)
+                oscillatingWorld[x][y].color = 0U;
+          }
+          drawPixelXYFseamless((float)x + 0.5, (float)y + 0.5, currColors[oscillatingWorld[x][y].color]);
+      }
+  }
+
+  // проверка зацикливания
+  if (colorCount[0] == deltaHue && colorCount[1] == deltaHue2 && colorCount[2] == deltaValue){
+    step++;
+    if (step > 10U){
+      if (colorCount[0] < colorCount[1])
+        step = 0;
+      else
+        step = 1;
+      if (colorCount[2] < colorCount[step])
+        step = 2;
+      colorCount[step] = 0U;
+      step = 0U;
+    }
+  }
+  else
+    step = 0U;
+    
+  // вброс хаоса
+  if (hue == hue2){// чтобы не каждый ход
+    hue2 += random8(220U) + 36U;
+    uint8_t tx = random8(WIDTH);
+    deltaHue = oscillatingWorld[tx][0U].color + 1U;
+    if (deltaHue > 2U) deltaHue = 0U;
+    oscillatingWorld[tx][0U].color = deltaHue;
+    oscillatingWorld[(tx + 1U) % WIDTH][0U].color = deltaHue;
+    oscillatingWorld[(tx + 2U) % WIDTH][0U].color = deltaHue;
+  }
+  
+  deltaHue = colorCount[0];
+  deltaHue2 = colorCount[1];
+  deltaValue = colorCount[2];
+  
+  // вброс исчезнувшего цвета
+  for (uint8_t c = 0; c < 3; c++)
+  {
+    if (colorCount[c] < 6U){
+      uint8_t tx = random8(WIDTH);
+      uint8_t ty = random8(HEIGHT);
+      if (random8(2U)){
+        oscillatingWorld[tx][ty].color = c;
+        oscillatingWorld[(tx + 1U) % WIDTH][ty].color = c;
+        oscillatingWorld[(tx + 2U) % WIDTH][ty].color = c;
+      }
+      else {
+        oscillatingWorld[tx][ty].color = c;
+        oscillatingWorld[tx][(ty + 1U) % HEIGHT].color = c;
+        oscillatingWorld[tx][(ty + 2U) % HEIGHT].color = c;
+      }
+    }
+  }
+
+  // перенос на следующий цикл
+  for (uint8_t x = 0; x < WIDTH; x++) {
+      for (uint8_t y = 0; y < HEIGHT; y++) {
+          setCellColors(x, y);
+      }
   }
 }

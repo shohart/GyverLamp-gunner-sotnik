@@ -453,7 +453,7 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
           }
           else if (!strncmp_P(inputBuffer, PSTR("TXT-reset=wifi"), 14)){
             wifiManager.resetSettings();                             // сброс сохранённых SSID и пароля (сброс настроек подключения к роутеру)
-            showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды - смена рабочего режима лампы, перезагрузка
+            showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
           }
           else if (!strncmp_P(inputBuffer, PSTR("TXT-reset=effects"), 17)){
             restoreSettings();
@@ -466,7 +466,10 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
               MqttManager::needToPublish = true;
             }
             #endif
-            showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды - смена рабочего режима лампы, перезагрузка
+            showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+            #ifdef USE_BLYNK
+            updateRemoteBlynkParams();
+            #endif
           }
         #endif // USE_SECRET_COMMANDS
         else
