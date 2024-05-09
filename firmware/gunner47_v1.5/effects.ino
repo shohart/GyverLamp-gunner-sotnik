@@ -4,6 +4,7 @@
 uint8_t hue, hue2; // постепенный сдвиг оттенка или какой-нибудь другой цикличный счётчик
 uint8_t deltaHue, deltaHue2; // ещё пара таких же, когда нужно много
 uint8_t step; // какой-нибудь счётчик кадров или постедовательностей операций
+uint8_t pcnt; // какой-то счётчик какого-то прогресса
 uint8_t deltaValue; // просто повторно используемая переменная
 CRGB ledsbuff[NUM_LEDS];
 #define NUM_LAYERSMAX 2
@@ -171,8 +172,8 @@ void fire2012WithPalette() {
 // ------------- огонь -----------------
 #define SPARKLES              (1U)                     // вылетающие угольки вкл выкл
 #define UNIVERSE_FIRE                                  // универсальный огонь 2-в-1 Цветной+Белый
-
-uint8_t pcnt = 0U;
+ 
+//uint8_t pcnt = 0U;                                     // внутренний делитель кадров для поднимающегося пламени - переменная вынесена в общий пул, чтобы использовать повторно
 //uint8_t deltaHue = 16U;                                // текущее смещение пламени (hueMask) - переменная вынесена в общий пул, чтобы использовать повторно
 //uint8_t shiftHue[HEIGHT];                              // массив дороожки горизонтального смещения пламени (hueMask) - вынесен в общий пул массивов переменных
 //uint8_t deltaValue = 16U;                              // текущее смещение пламени (hueValue) - переменная вынесена в общий пул, чтобы использовать повторно
@@ -212,6 +213,7 @@ void fireRoutine(bool isColored) // <- ******* для оригинальной �
     //FastLED.clear();
     generateLine();
     //memset(matrixValue, 0, sizeof(matrixValue)); без очистки
+    pcnt = 0;
   }
   if (pcnt >= 30) {                                         // внутренний делитель кадров для поднимающегося пламени
     shiftUp();                                              // смещение кадра вверх
@@ -481,7 +483,7 @@ void pulseRoutine(uint8_t PMode) {
 }
 
 // ------------- цвет + вода в бассейне ------------------
-// (с) Сотнег. 03.2020
+// (с) SottNick. 03.2020
 // эффект иммеет шов на стыке краёв матрицы (сзади лампы, как и у других эффектов), зато адаптирован для нестандартных размеров матриц.
 // можно было бы сделать абсолютно бесшовный вариант для конкретной матрицы (16х16), но уже была бы заметна зацикленность анимации.
 
@@ -1344,54 +1346,54 @@ static const uint8_t aquariumGIF[25][32][32] PROGMEM =
     {0x00, 0x00, 0x00, 0x00, 0x5e, 0x74, 0x4e, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6a, 0xb5, 0x7f, 0x31, 0x12, 0x23, 0x3d, 0x3d, 0x1d, 0x00, 0x00, 0x00, 0x00}
   }
 };
-uint8_t GIFframe = 0U;  // текущий кадр анимации (не важно, какой в начале)
-uint8_t GIFshiftx = 0U; // какой-то там сдвиг текстуры по радиусу лампы
-uint8_t GIFshifty = 0U; // какой-то там сдвиг текстуры по высоте
+//uint8_t step = 0U;  // GIFframe = 0U; текущий кадр анимации (не важно, какой в начале)
+//uint8_t deltaHue = 0U; // GIFshiftx = 0U; какой-то там сдвиг текстуры по радиусу лампы
+//uint8_t deltaHue2 = 0U; // GIFshifty = 0U; какой-то там сдвиг текстуры по высоте
 
 #define CAUSTICS_BR                     (100U)                // яркость бликов в процентах (от чистого белого света)
 
 void poolRoutine()
 {
+  if (loadingFlag) {
+    loadingFlag = false;
+    hue = modes[currentMode].Scale * 2.55;
+    for (int16_t i = 0U; i < NUM_LEDS; i++)
+    {
+      leds[i] = CHSV(hue, 255U, 255U);
+    }
+    deltaHue = 0U;
+    deltaHue2 = 0U;
+  }
   if (modes[currentMode].Speed != 255U) // если регулятор скорости на максимуме, то будет работать старый эффект "цвет" (без анимации бликов воды)
   {
-    if (GIFframe > 24U) // количество кадров в анимации -1 (отсчёт с нуля)
-      GIFframe = 0U;
-    if (GIFframe > 0U && GIFframe < 3U) // пару раз за цикл анимации двигаем текстуру по радиусу лампы. а может и не двигаем. как повезёт
+    if (step > 24U) // количество кадров в анимации -1 (отсчёт с нуля)
+      step = 0U;
+    if (step > 0U && step < 3U) // пару раз за цикл анимации двигаем текстуру по радиусу лампы. а может и не двигаем. как повезёт
     {
       if (random(2U) == 0U)
       {
-        GIFshiftx++;
-        if (GIFshiftx > 31U) GIFshiftx = 0U;
+        deltaHue++;
+        if (deltaHue > 31U) deltaHue = 0U;
       }
     }
-    if (GIFframe > 11U && GIFframe < 14U) // пару раз за цикл анимации двигаем текстуру по вертикали. а может и не двигаем. как повезёт
+    if (step > 11U && step < 14U) // пару раз за цикл анимации двигаем текстуру по вертикали. а может и не двигаем. как повезёт
     {
       if (random(2U) == 0U)
       {
-        GIFshifty++;
-        if (GIFshifty > 31U) GIFshifty = 0U;
+        deltaHue2++;
+        if (deltaHue2 > 31U) deltaHue2 = 0U;
       }
     }
 
     for (uint8_t x = 0U; x < WIDTH ; x++) {
       for (uint8_t y = 0U; y < HEIGHT; y++) {
         // y%32, x%32 - это для масштабирования эффекта на лампы размером большим, чем размер анимации 32х32, а также для произвольного сдвига текстуры
-        leds[XY(x, y)] = CHSV(modes[currentMode].Scale * 2.55, 255U - pgm_read_byte(&aquariumGIF[GIFframe][(y + GIFshifty) % 32U][(x + GIFshiftx) % 32U]) * CAUSTICS_BR / 100U, 255U);
+        leds[XY(x, y)] = CHSV(hue, 255U - pgm_read_byte(&aquariumGIF[step][(y + deltaHue2) % 32U][(x + deltaHue) % 32U]) * CAUSTICS_BR / 100U, 255U);
         // чтобы регулятор Масштаб начал вместо цвета регулировать яркость бликов, нужно закомментировать предыдущую строчку и раскоментировать следующую
-        //        leds[XY(x, y)] = CHSV(158U, 255U - pgm_read_byte(&aquariumGIF[GIFframe][(y+GIFshifty)%32U][(x+GIFshiftx)%32U]) * modes[currentMode].Scale / 100U, 255U);
+        //        leds[XY(x, y)] = CHSV(158U, 255U - pgm_read_byte(&aquariumGIF[step][(y+deltaHue2)%32U][(x+deltaHue)%32U]) * modes[currentMode].Scale / 100U, 255U);
       }
     }
-    GIFframe++;
-  }
-  else if (loadingFlag)
-  {
-    loadingFlag = false;
-    FastLED.clear();
-
-    for (int16_t i = 0U; i < NUM_LEDS; i++)
-    {
-      leds[i] = CHSV(modes[currentMode].Scale * 2.55, 255U, 255U);
-    }
+    step++;
   }
 }
 
@@ -1452,7 +1454,7 @@ void colorRoutine()
   if (loadingFlag)
   {
     loadingFlag = false;
-    FastLED.clear();
+    //FastLED.clear(); нафига тут это было?!
 
     for (int16_t i = 0U; i < NUM_LEDS; i++)
     {
@@ -1586,7 +1588,7 @@ void matrixRoutine()
 int32_t lightersPos[2U][LIGHTERS_AM];
 int8_t lightersSpeed[2U][LIGHTERS_AM];
 CHSV lightersColor[LIGHTERS_AM];
-uint8_t loopCounter;
+//uint8_t step; // раньше называлось uint8_t loopCounter;
 int32_t angle[LIGHTERS_AM];
 int32_t speedV[LIGHTERS_AM];
 int8_t angleSpeed[LIGHTERS_AM];
@@ -1607,10 +1609,10 @@ void lightersRoutine()
     }
   }
   FastLED.clear();
-  if (++loopCounter > 20U) loopCounter = 0U;
+  if (++step > 20U) step = 0U;
   for (uint8_t i = 0U; i < modes[currentMode].Scale; i++)
   {
-    if (loopCounter == 0U)                                  // меняем скорость каждые 255 отрисовок
+    if (step == 0U)                                  // меняем скорость каждые 255 отрисовок
     {
       lightersSpeed[0U][i] += random(-3, 4);
       lightersSpeed[1U][i] += random(-3, 4);
@@ -1738,7 +1740,7 @@ void lightBallsRoutine()
 int16_t coordB[2U];
 int8_t vectorB[2U];
 CRGB ballColor;
-int8_t ballSize;
+//int8_t deltaValue; //ballSize;
 
 void ballRoutine()
 {
@@ -1752,7 +1754,7 @@ void ballRoutine()
       coordB[i] = WIDTH / 2 * 10;
       vectorB[i] = random(8, 20);
     }
-    ballSize = map(modes[currentMode].Scale * 2.55, 0U, 255U, 2U, max((uint8_t)min(WIDTH, HEIGHT) / 3, 2));
+    deltaValue = map(modes[currentMode].Scale * 2.55, 0U, 255U, 2U, max((uint8_t)min(WIDTH, HEIGHT) / 3, 2));
     ballColor = CHSV(random(0, 9) * 28, 255U, 255U);
 //    _pulse_color = CHSV(random(0, 9) * 28, 255U, 255U);
   }
@@ -1765,8 +1767,8 @@ void ballRoutine()
 //  }
  
   if ((modes[currentMode].Scale & 0x01))
-    for (uint8_t i = 0U; i < ballSize; i++)
-      for (uint8_t j = 0U; j < ballSize; j++)
+    for (uint8_t i = 0U; i < deltaValue; i++)
+      for (uint8_t j = 0U; j < deltaValue; j++)
         leds[XY(coordB[0U] / 10 + i, coordB[1U] / 10 + j)] = _pulse_color;
 
   for (uint8_t i = 0U; i < 2U; i++)
@@ -1780,16 +1782,16 @@ void ballRoutine()
       //vectorB[i] += random(0, 6) - 3;
     }
   }
-  if (coordB[0U] > (int16_t)((WIDTH - ballSize) * 10))
+  if (coordB[0U] > (int16_t)((WIDTH - deltaValue) * 10))
   {
-    coordB[0U] = (WIDTH - ballSize) * 10;
+    coordB[0U] = (WIDTH - deltaValue) * 10;
     vectorB[0U] = -vectorB[0U];
     if (RANDOM_COLOR) ballColor = CHSV(random(0, 9) * 28, 255U, 255U);
     //vectorB[0] += random(0, 6) - 3;
   }
-  if (coordB[1U] > (int16_t)((HEIGHT - ballSize) * 10))
+  if (coordB[1U] > (int16_t)((HEIGHT - deltaValue) * 10))
   {
-    coordB[1U] = (HEIGHT - ballSize) * 10;
+    coordB[1U] = (HEIGHT - deltaValue) * 10;
     vectorB[1U] = -vectorB[1U];
     if (RANDOM_COLOR) ballColor = CHSV(random(0, 9) * 28, 255U, 255U);
     //vectorB[1] += random(0, 6) - 3;
@@ -1801,8 +1803,8 @@ void ballRoutine()
 //  else
     FastLED.clear();
      
-  for (uint8_t i = 0U; i < ballSize; i++)
-    for (uint8_t j = 0U; j < ballSize; j++)
+  for (uint8_t i = 0U; i < deltaValue; i++)
+    for (uint8_t j = 0U; j < deltaValue; j++)
       leds[XY(coordB[0U] / 10 + i, coordB[1U] / 10 + j)] = ballColor;
 }
 
@@ -1893,8 +1895,8 @@ void showWarning(
 // --------------------------- эффект кометы ----------------------
 
 // далее идут общие процедуры для эффектов от Stefan Petrick, а непосредственно Комета - в самом низу
-const uint8_t e_centerX =  (WIDTH / 2) - 1;
-const uint8_t e_centerY = (HEIGHT / 2) - 1;
+const uint8_t e_centerX =  (WIDTH / 2) -  ((WIDTH - 1) & 0x01);
+const uint8_t e_centerY = (HEIGHT / 2) - ((HEIGHT - 1) & 0x01);
 int8_t zD;
 int8_t zF;
 // The coordinates for 3 16-bit noise spaces.
@@ -1934,7 +1936,7 @@ void FillNoise(int8_t layer) {
     }
   }
 }
-
+/* кажется, эти функции вообще не используются
 void MoveX(int8_t delta) {
   //CLS2();
   for (uint8_t y = 0; y < HEIGHT; y++) {
@@ -1976,7 +1978,7 @@ void MoveY(int8_t delta) {
   //  }
   //}
 }
-
+*/
 void MoveFractionalNoiseX(int8_t amplitude = 1, float shift = 0) {
   for (int8_t y = 0; y < HEIGHT; y++) {
     int16_t amount = ((int16_t)noise3d[0][0][y] - 128) * 2 * amplitude + shift * 256  ;
@@ -2028,11 +2030,13 @@ void MultipleStream() { // 2 comets
   // gelb im Kreis
   byte xx = 2 + sin8( millis() / 10) / 22;
   byte yy = 2 + cos8( millis() / 10) / 22;
+if (xx < WIDTH && yy < HEIGHT)
   leds[XY( xx, yy)] = 0xFFFF00;
 
   // rot in einer Acht
   xx = 4 + sin8( millis() / 46) / 32;
   yy = 4 + cos8( millis() / 15) / 32;
+if (xx < WIDTH && yy < HEIGHT)
   leds[XY( xx, yy)] = 0xFF0000;
 
   // Noise
@@ -2052,10 +2056,12 @@ void MultipleStream2() { // 3 comets
 
   byte xx = 2 + sin8( millis() / 10) / 22;
   byte yy = 2 + cos8( millis() / 9) / 22;
+if (xx < WIDTH && yy < HEIGHT)
   leds[XY( xx, yy)] += 0x0000FF;
 
   xx = 4 + sin8( millis() / 10) / 32;
   yy = 4 + cos8( millis() / 7) / 32;
+if (xx < WIDTH && yy < HEIGHT)
   leds[XY( xx, yy)] += 0xFF0000;
   leds[XY( e_centerX, e_centerY)] += 0xFFFF00;
 
@@ -3700,8 +3706,9 @@ void twinklesRoutine(){
       loadingFlag = false;
       setCurrentPalette();
       hue = 0U;
+      deltaValue = (modes[currentMode].Scale - 1U) % 11U + 1U;  // вероятность пикселя загореться от 1/1 до 1/11
       for (uint32_t idx=0; idx < NUM_LEDS; idx++) {
-        if (random8((modes[currentMode].Scale - 1U) % 11U + 1U) == 0){
+        if (random8(deltaValue) == 0){
           ledsbuff[idx].r = random8();                          // оттенок пикселя
           ledsbuff[idx].g = random8(1, TWINKLES_SPEEDS * 2 +1); // скорость и направление (нарастает 1-4 или угасает 5-8)
           ledsbuff[idx].b = random8();                          // яркость
@@ -3712,7 +3719,7 @@ void twinklesRoutine(){
     }
     for (uint32_t idx=0; idx < NUM_LEDS; idx++) {
       if (ledsbuff[idx].b == 0){
-        if (random8((modes[currentMode].Scale - 1U) % 11U + 1U) == 0 && hue > 0){  // если пиксель ещё не горит, зажигаем каждый ХЗй
+        if (random8(deltaValue) == 0 && hue > 0){  // если пиксель ещё не горит, зажигаем каждый ХЗй
           ledsbuff[idx].r = random8();                          // оттенок пикселя
           ledsbuff[idx].g = random8(1, TWINKLES_SPEEDS +1);     // скорость и направление (нарастает 1-4, но не угасает 5-8)
           ledsbuff[idx].b = ledsbuff[idx].g;                    // яркость
@@ -3902,12 +3909,12 @@ void ringsRoutine(){
 // ------------------------------ ЭФФЕКТ КУБИК РУБИКА 2D ----------------------
 // (c) SottNick
 
-#define PAUSE_MAX 7
+#define PAUSE_MAX 7 // пропустить 7 кадров после завершения анимации сдвига ячеек
 
 //uint8_t noise3d[1][WIDTH][HEIGHT];
 //uint8_t hue2; // осталось шагов паузы
 //uint8_t step; // текущий шаг сдвига (от 0 до deltaValue-1)
-//uint8_t deltaValue; // всего шагов сдвига (от 3 до 4)
+//uint8_t deltaValue; // всего шагов сдвига (до razmer? до (razmer?+1)*shtuk?)
 //uint8_t deltaHue, deltaHue2; // глобальный X и глобальный Y нашего "кубика"
 uint8_t razmerX, razmerY; // размеры ячеек по горизонтали / вертикали
 uint8_t shtukX, shtukY; // количество ячеек по горизонтали / вертикали
@@ -3928,8 +3935,8 @@ void cube2dRoutine(){
       setCurrentPalette();
       FastLED.clear();
 
-      razmerY = (modes[currentMode].Scale - 1U) % 11U + 1U; // размер ячейки от 1 до 11 пикселей для каждой из 9 палитр
       razmerX = (modes[currentMode].Scale - 1U) % 11U + 1U; // размер ячейки от 1 до 11 пикселей для каждой из 9 палитр
+      razmerY = razmerX;
       if (modes[currentMode].Speed & 0x01) // по идее, ячейки не обязательно должны быть квадратными, поэтому можно тут поизвращаться
         razmerY = (razmerY << 1U) + 1U;
 
@@ -3969,7 +3976,7 @@ void cube2dRoutine(){
         }
       }
       step = 4U; // текущий шаг сдвига первоначально с перебором (от 0 до deltaValue-1)
-      deltaValue = 4U; // всего шагов сдвига (от 3 до 4)
+      deltaValue = 4U; // всего шагов сдвига (от razmer? до (razmer?+1) * shtuk?)
       hue2 = 0U; // осталось шагов паузы
 
       //это лишнее обнуление
@@ -4192,4 +4199,141 @@ void cube2dRoutine(){
         }      
       }
    }
+}
+
+// ------------------------------ ЭФФЕКТ ЧАСЫ ----------------------
+// (c) SottNick
+
+#define CLOCK_SAVE_MODE     // удалите или закомментируйте эту строчку, чтобы цифры всегда оставались на одном месте, не двигались по вертикали (не хорошо для светодиодов. выгорают зря)
+#if HEIGHT > 12
+#define CLOCK_BLINKING      // удалите или закомментируйте эту строчку, чтобы точки не мигали
+#endif
+//uint8_t hue, hue2; // храним тут часы и минуты
+//uint8_t deltaHue, deltaHue2; // храним здесь задержки мигания точек
+//uint8_t deltaValue; // счётчик цикла / яркости точек на часах
+//uint8_t poleX, poleY; // храним здесь сдвиг циферблата по горизонтали и вертикали (переменные объявлены в эффекте Кубик Рубика)
+static const uint8_t clockFont3x5[10][3] PROGMEM = { // цифры зеркально и на левом боку (так проще рисовать в циклах и экономнее для памяти)
+  {B11111,
+   B10001,
+   B11111},
+  {B01001,
+   B11111,
+   B00001},
+  {B10011,
+   B10101,
+   B01001},
+  {B10001,
+   B10101,
+   B01010},
+  {B11100,
+   B00100,
+   B11111},
+  {B11101,
+   B10101,
+   B10010},
+  {B01111,
+   B10101,
+   B10111},
+  {B10011,
+   B10100,
+   B11000},
+  {B11111,
+   B10101,
+   B11111},
+  {B11101,
+   B10101,
+   B11110}
+};
+void drawDig3x5(uint8_t x, uint8_t y, uint8_t num, CRGB color){ // uint8_t hue, uint8_t sat, uint8_t bri = 255U
+    for (uint8_t i = 0U; i < 3U; i++)
+    {
+      uint8_t m = pgm_read_byte(&clockFont3x5[num][i]);
+      for (uint8_t j = 0U; j < 5U; j++)
+        if ((m >> j) & 0x01)
+          drawPixelXY((x + i) % WIDTH, (y + j) % HEIGHT, color);
+    }
+}
+
+void clockRoutine(){
+    if (loadingFlag)
+    {
+      loadingFlag = false;
+      poleX = (modes[currentMode].Speed - 1U) % WIDTH; //смещение цифр по горизонтали
+      #ifdef CLOCK_BLINKING
+        poleY = (modes[currentMode].Speed - 1U) / WIDTH % (HEIGHT - 13U);  //смещение цифр по вертикали (для режима CLOCK_SAVE_MODE будет меняться само)
+      #else
+        #if HEIGHT > 11
+          poleY = (modes[currentMode].Speed - 1U) / WIDTH % (HEIGHT - 12U);  //смещение цифр по вертикали (для режима CLOCK_SAVE_MODE будет меняться само)
+        #else // если матрица всего 11 пикселей в высоту, можно сэкономить 1 и впихнуть часы в неё. но если меньше, нужно брать код эффекта с высотой цифр 4 пикселя, а не 5
+          poleY = (modes[currentMode].Speed - 1U) / WIDTH % (HEIGHT - 11U);  //смещение цифр по вертикали (для режима CLOCK_SAVE_MODE будет меняться само)
+        #endif
+      #endif
+      hue2 = 255U; // количество минут в данный момент (первоначально запредельое значение)
+      deltaHue2 = 0; // яркость точки в данный момент
+      deltaValue = modes[currentMode].Scale * 2.55; // выбранный оттенок цифр
+    }
+
+  #ifdef USE_NTP
+  time_t currentLocalTime = localTimeZone.toLocal(timeClient.getEpochTime());
+  #else
+  time_t currentLocalTime = millis() / 1000UL;
+  #endif
+
+  if (minute(currentLocalTime) != hue2)
+  {
+    #ifdef CLOCK_SAVE_MODE
+      #ifdef CLOCK_BLINKING
+        poleY = (poleY + 1U) % (HEIGHT - 13U);
+      #else
+        #if HEIGHT > 11
+          poleY = (poleY + 1U) % (HEIGHT - 12U);
+        #else // если матрица всего 11 пикселей в высоту, можно сэкономить 1 и впихнуть часы в неё. но если меньше, нужно брать код эффекта с высотой цифр 4 пикселя, а не 5
+          poleY = (poleY + 1U) % (HEIGHT - 11U);
+        #endif
+      #endif
+    #endif
+    step = 1U; // = CLOCK_REFRESH_DELAY; раньше делал постепенное затухание. получалось хуже
+    hue = hour(currentLocalTime);
+    hue2 = minute(currentLocalTime);
+  }
+  if (step > 0) // тут меняются цифры на часах
+  {
+    step--;
+    //uint8_t bri = (CLOCK_REFRESH_DELAY - step) * 255.0 / CLOCK_REFRESH_DELAY;
+    uint8_t sat = (modes[currentMode].Scale == 100) ? 0U : 255U;
+
+    FastLED.clear();
+    // рисуем цифры
+    #ifdef CLOCK_BLINKING
+      drawDig3x5(poleX, (poleY + 8U) % HEIGHT,                  hue  / 10U % 10U, CHSV(deltaValue, sat, 255U));
+      drawDig3x5((poleX + 4U) % WIDTH, (poleY + 8U) % HEIGHT,   hue        % 10U, CHSV(deltaValue, sat, 255U));
+    #else
+      #if HEIGHT > 11
+        drawDig3x5(poleX, (poleY + 7U) % HEIGHT,                hue  / 10U % 10U, CHSV(deltaValue, sat, 255U));
+        drawDig3x4((poleX + 4U) % WIDTH, (poleY + 7U) % HEIGHT, hue        % 10U, CHSV(deltaValue, sat, 255U));
+      #else // если матрица всего 11 пикселей в высоту, можно сэкономить 1 и впихнуть часы в неё. но если меньше, нужно брать код эффекта с высотой цифр 4 пикселя, а не 5
+        drawDig3x5(poleX, (poleY + 6U) % HEIGHT,                hue  / 10U % 10U, CHSV(deltaValue, sat, 255U));
+        drawDig3x4((poleX + 4U) % WIDTH, (poleY + 6U) % HEIGHT, hue        % 10U, CHSV(deltaValue, sat, 255U));
+      #endif
+    #endif
+    drawDig3x5(poleX, poleY,                                    hue2 / 10U % 10U, CHSV(deltaValue, sat, 255U));
+    drawDig3x5((poleX + 4U) % WIDTH, poleY,                     hue2       % 10U, CHSV(deltaValue, sat, 255U));
+  }
+  
+#ifdef CLOCK_BLINKING
+  // тут мигают точки
+//  if (deltaHue != 0U)
+//    deltaHue--;
+//  else
+//  {
+//    deltaHue = 4U; // множитель задержки 50 мс * 4+1U = 250 мс
+    if (deltaHue2 & 0x01)
+      deltaHue2 = deltaHue2 - ((deltaHue2 >  15U) ? 16U : 15U);//- ((deltaHue2 >  63U) ? 64U : 63U);
+    else
+      deltaHue2 = deltaHue2 + ((deltaHue2 < 240U) ? 16U : 15U);//+ ((deltaHue2 < 192U) ? 64U : 63U);
+    
+    drawPixelXY((poleX + 2U) % WIDTH, poleY + 6U, CHSV(deltaValue, (modes[currentMode].Scale == 100) ? 0U : 255U, deltaHue2)); // цвет белый для .Scale=100
+    drawPixelXY((poleX + 4U) % WIDTH, poleY + 6U, CHSV(deltaValue, (modes[currentMode].Scale == 100) ? 0U : 255U, deltaHue2)); // цвет белый для .Scale=100
+//  }
+#endif
 }

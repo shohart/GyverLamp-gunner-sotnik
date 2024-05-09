@@ -43,10 +43,10 @@ void effectsTick()
         case EFF_FLOCK_N_PR:          flockRoutine(true);                 break;  // (18U) Стая и хищник
         case EFF_SINUSOID3:           Sinusoid3Routine();                 break;  // (19U) Синусоид
         case EFF_METABALLS:           MetaBallsRoutine();                 break;  // (20U) Метаболз
-
-
         case EFF_MATRIX:              matrixRoutine();                    break;  // (21U) Матрица
         case EFF_FIRE_2012:           fire2012again();                    break;  // (22U) Огонь 2012
+
+
         case EFF_FIRE_2018:           Fire2018_2();                       break;  // (23U) Огонь 2018
         case EFF_FIRE:                fireRoutine(true);                  break;  // (24U) Огонь
         case EFF_FIRE_WHITTE:         fireRoutine(true);                  break;  // (25U) Белый огонь
@@ -67,10 +67,10 @@ void effectsTick()
         case EFF_COMET_PULSING:       MultipleStream4();                  break;  // (40U) Пульсирующая комета
         case EFF_COMET_TWO:           MultipleStream();                   break;  // (41U) Две кометы
         case EFF_COMET_THREE:         MultipleStream2();                  break;  // (42U) Три кометы
-
-
         case EFF_FIREFLY:             MultipleStream3();                  break;  // (43U) Парящий огонь
         case EFF_FIREFLY_TOP:         MultipleStream5();                  break;  // (44U) Верховой огонь
+
+
         case EFF_SNAKE:               MultipleStream8();                  break;  // (45U) Радужный змей
         case EFF_SPARKLES:            sparklesRoutine();                  break;  // (46U) Конфетти
         case EFF_TWINKLES:            twinklesRoutine();                  break;  // (47U) Мерцание
@@ -91,7 +91,8 @@ void effectsTick()
         case EFF_RAINBOW_HOR:         rainbowHorizontalRoutine();         break;  // (62U) Радуга горизонтальная
         case EFF_RAINBOW_DIAG:        rainbowDiagonalRoutine();           break;  // (63U) Радуга диагональная
         case EFF_CUBE:                ballRoutine();                      break;  // (64U) Блуждающий кубик
-        case EFF_TEXT:                text_running();                     break;  // (65U) Бегущая строка
+        case EFF_CLOCK:               clockRoutine();                     break;  // (65U) Часы
+        case EFF_TEXT:                text_running();                     break;  // (66U) Бегущая строка
       }
       FastLED.show();
     }
