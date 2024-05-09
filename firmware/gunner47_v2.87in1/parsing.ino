@@ -306,6 +306,13 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         memcpy(buff, &inputBuffer[12], strlen(inputBuffer));  // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 13
         TimerManager::TimeToFire = millis() + strtoull(buff, &endToken, 10) * 1000;
 
+        #if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+          if (TimerManager::TimerRunning){
+            button_sleep_time = constrain(strtoull(buff, &endToken, 10) / 60, 1 , 255);
+            EepromManager::Save_button_sleep_time ( &button_sleep_time );
+          }
+        #endif // #if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+
         TimerManager::TimerHasFired = false;
         sendTimer(inputBuffer);
 
@@ -627,6 +634,13 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
             memcpy(buff, &inputBuffer[10], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 11
             uint16_t temp = atoi(buff);
             if (ONflag && temp) {
+              #if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+                if (TimerManager::TimerRunning){
+                  button_sleep_time = constrain(temp, 1U , 255U);
+                  EepromManager::Save_button_sleep_time ( &button_sleep_time );
+                }
+              #endif // #if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+              
               TimerManager::TimeToFire = millis() + temp * 60UL * 1000UL;
               TimerManager::TimerRunning = true;
               showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
@@ -657,6 +671,19 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
             }
           }
           #endif //#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+          #if defined(off_BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-sleep="), 10)){
+            memcpy(buff, &inputBuffer[10], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 11
+            int16_t temp = atoi(buff);
+            if (temp > 0 && temp <=255) {
+              button_sleep_time = temp;
+              EepromManager::Save_button_sleep_time ( &button_sleep_time );
+              showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+            }
+            else
+              showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
+          }
+          #endif //#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
         #endif // USE_SECRET_COMMANDS
         else
         {  
