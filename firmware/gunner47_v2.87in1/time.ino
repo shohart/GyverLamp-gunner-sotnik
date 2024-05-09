@@ -11,19 +11,23 @@
                                                                           // интервал последующих синхронизаций времени определяён в NTP_INTERVAL (30-60 минут)
                                                                           // при ошибках повторной синхронизации времени функции будильника отключаться не будут
 #define RESOLVE_TIMEOUT       (1500UL)                                    // таймаут ожидания подключения к интернету в миллисекундах (1,5 секунды)
-uint64_t lastResolveTryMoment = 0UL;
+uint32_t lastResolveTryMoment = 0UL;
 IPAddress ntpServerIp = {0, 0, 0, 0};
 
 #endif
 
 #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
 
+/* оптимизируем структуру данных и их обработчик
 static CHSV dawnColor = CHSV(0, 0, 0);                                    // цвет "рассвета"
 static CHSV dawnColorMinus1 = CHSV(0, 0, 0);                              // для большей плавности назначаем каждый новый цвет только 1/10 всех диодов; каждая следующая 1/10 часть будет "оставать" на 1 шаг
 static CHSV dawnColorMinus2 = CHSV(0, 0, 0);
 static CHSV dawnColorMinus3 = CHSV(0, 0, 0);
 static CHSV dawnColorMinus4 = CHSV(0, 0, 0);
 static CHSV dawnColorMinus5 = CHSV(0, 0, 0);
+static CHSV dawnColor = CHSV(0, 0, 0);*/
+static CRGB dawnColor[6];
+
 static uint8_t dawnCounter = 0;                                           // счётчик первых 10 шагов будильника
 
 void timeTick()
@@ -61,7 +65,6 @@ if (stillUseNTP)// && ntpServerAddressResolved) хз, нужно ли это п�
 #endif      
 //    if (!timeSynched || millis() > ntpTimeLastSync + NTP_INTERVAL) // uint32_t ntpTimeLastSync
 //    {// если прошло более NTP_INTERVAL, значит, можно попытаться получить время с сервера точного времени один разок
-//      phoneTimeLastSync = millis();
       if (timeClient.update()){
          #ifdef WARNING_IF_NO_TIME
            noTimeClear();
@@ -108,6 +111,7 @@ if (stillUseNTP)// && ntpServerAddressResolved) хз, нужно ли это п�
           // величина рассвета 0-255
           int32_t dawnPosition = 255 * ((float)(thisFullTime - (alarms[thisDay].Time - pgm_read_byte(&dawnOffsets[dawnMode])) * 60) / (pgm_read_byte(&dawnOffsets[dawnMode]) * 60));
           dawnPosition = constrain(dawnPosition, 0, 255);
+          /* оптимизируем структуру данных и их обработчик
           dawnColorMinus5 = dawnCounter > 4 ? dawnColorMinus4 : dawnColorMinus5;
           dawnColorMinus4 = dawnCounter > 3 ? dawnColorMinus3 : dawnColorMinus4;
           dawnColorMinus3 = dawnCounter > 2 ? dawnColorMinus2 : dawnColorMinus3;
@@ -115,18 +119,30 @@ if (stillUseNTP)// && ntpServerAddressResolved) хз, нужно ли это п�
           dawnColorMinus1 = dawnCounter > 0 ? dawnColor : dawnColorMinus1;
           dawnColor = CHSV(map(dawnPosition, 0, 255, 10, 35),
                            map(dawnPosition, 0, 255, 255, 170),
+                           map(dawnPosition, 0, 255, 2, DAWN_BRIGHT));*/
+          for (uint8_t j = 5U; j > 0U; j--)
+            if (dawnCounter >= j)
+              dawnColor[j] = dawnColor[j - 1U];
+          dawnColor[0] = CHSV(map(dawnPosition, 0, 255, 10, 35),
+                           map(dawnPosition, 0, 255, 255, 170),
                            map(dawnPosition, 0, 255, 2, DAWN_BRIGHT));
-          dawnCounter++;
+
+          /* исправляем переполнение счётчика
+          dawnCounter++;*/
+          if (dawnCounter < 5U) dawnCounter++;
+          
           // fill_solid(leds, NUM_LEDS, dawnColor);
+          
           for (uint16_t i = 0U; i < NUM_LEDS; i++)
-          {
+          /*{ оптимизируем цикл
             if (i % 6 == 0) leds[i] = dawnColor;                          // 1я 1/10 диодов: цвет текущего шага
             if (i % 6 == 1) leds[i] = dawnColorMinus1;                    // 2я 1/10 диодов: -1 шаг
             if (i % 6 == 2) leds[i] = dawnColorMinus2;                    // 3я 1/10 диодов: -2 шага
             if (i % 6 == 3) leds[i] = dawnColorMinus3;                    // 3я 1/10 диодов: -3 шага
             if (i % 6 == 4) leds[i] = dawnColorMinus4;                    // 3я 1/10 диодов: -4 шага
             if (i % 6 == 5) leds[i] = dawnColorMinus5;                    // 3я 1/10 диодов: -5 шагов
-          }
+          }*/
+            leds[i] = dawnColor[i % 6U];
           FastLED.setBrightness(255);
           delay(1);
           FastLED.show();
@@ -156,12 +172,17 @@ if (stillUseNTP)// && ntpServerAddressResolved) хз, нужно ли это п�
           changePower();                                                  // выключение матрицы или установка яркости текущего эффекта в засисимости от того, была ли включена лампа до срабатывания будильника
         }
         manualOff = false;
+        /* оптимизируем структуру данных и их обработчик
         dawnColorMinus1 = CHSV(0, 0, 0);
         dawnColorMinus2 = CHSV(0, 0, 0);
         dawnColorMinus3 = CHSV(0, 0, 0);
         dawnColorMinus4 = CHSV(0, 0, 0);
-        dawnColorMinus5 = CHSV(0, 0, 0);
+        dawnColorMinus5 = CHSV(0, 0, 0);*/
+        for (uint8_t j = 0U; j < 6U; j++)
+          dawnColor[j] = 0;
+          
         dawnCounter = 0;
+        
 
         #if defined(ALARM_PIN) && defined(ALARM_LEVEL)                    // установка сигнала в пин, управляющий будильником
         digitalWrite(ALARM_PIN, !ALARM_LEVEL);
@@ -222,24 +243,51 @@ void getFormattedTime(char *buf)
 time_t getCurrentLocalTime()
 {
   #if defined(USE_NTP) || defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
-  if (timeSynched)
-  {
-    #if defined(USE_NTP) && defined(USE_MANUAL_TIME_SETTING) || defined(USE_NTP) && defined(GET_TIME_FROM_PHONE)
-    if (ntpServerAddressResolved)
-      return localTimeZone.toLocal(timeClient.getEpochTime());
-    else    
-      return millis() / 1000UL + manualTimeShift;
+    #if defined(USE_MANUAL_TIME_SETTING) || defined(GET_TIME_FROM_PHONE)
+      static uint32_t milliscorrector;
     #endif
 
-    #if !defined(USE_NTP) && defined(USE_MANUAL_TIME_SETTING) || !defined(USE_NTP) && defined(GET_TIME_FROM_PHONE)
-    return millis() / 1000UL + manualTimeShift;
-    #endif
+    if (timeSynched)
+    {
+      #if defined(USE_NTP) && defined(USE_MANUAL_TIME_SETTING) || defined(USE_NTP) && defined(GET_TIME_FROM_PHONE)
+        if (milliscorrector > millis()
+          #ifdef GET_TIME_FROM_PHONE
+            && manualTimeShift + millis() / 1000UL < phoneTimeLastSync
+          #endif
+        ){
+          manualTimeShift += 4294967; // защищаем время от переполнения millis()
+          #ifdef GET_TIME_FROM_PHONE
+            phoneTimeLastSync += 4294967; // а это, чтобы через 49 дней всё не заглючило
+          #endif
+        }
+        milliscorrector = millis();
+   
+        if (ntpServerAddressResolved)
+          return localTimeZone.toLocal(timeClient.getEpochTime());
+        else    
+          return millis() / 1000UL + manualTimeShift;
+      #endif
 
-    #if defined(USE_NTP) && !defined(USE_MANUAL_TIME_SETTING) || defined(USE_NTP) && !defined(GET_TIME_FROM_PHONE)
-    return localTimeZone.toLocal(timeClient.getEpochTime());
-    #endif
-  }
-  else
+      #if !defined(USE_NTP) && defined(USE_MANUAL_TIME_SETTING) || !defined(USE_NTP) && defined(GET_TIME_FROM_PHONE)
+        if (milliscorrector > millis()
+          #ifdef GET_TIME_FROM_PHONE
+            && manualTimeShift + millis() / 1000UL < phoneTimeLastSync
+          #endif
+        ){
+          manualTimeShift += 4294967; // защищаем время от переполнения millis()
+          #ifdef GET_TIME_FROM_PHONE
+            phoneTimeLastSync += 4294967; // а это, чтобы через 49 дней всё не заглючило
+          #endif
+        }
+        milliscorrector = millis();
+        return millis() / 1000UL + manualTimeShift;
+      #endif
+
+      #if defined(USE_NTP) && !defined(USE_MANUAL_TIME_SETTING) || defined(USE_NTP) && !defined(GET_TIME_FROM_PHONE)
+        return localTimeZone.toLocal(timeClient.getEpochTime());
+      #endif
+    }
+      else
   #endif
-   return millis() / 1000UL;
+        return millis() / 1000UL;
 }
