@@ -73,6 +73,9 @@
 #define EEPROM_RANDOM_ON_ADDRESS             (27U)         // адрес в EEPROM памяти для записи признака Вкл/Выкл случайного выбора настроек эффектов в режиме Цикл
 #endif  //RANDOM_SETTINGS_IN_CYCLE_MODE
 
+#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+#define EEPROM_BUTTON_SLEEP_TIMER            (28U)         // адрес в EEPROM памяти для записи значения таймера сна, активируемого по кнопке
+#endif  //#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
 
 #define EEPROM_ALARM_STRUCT_SIZE             (3U)           // 1 байт - вкл/выкл; 2 байта - время от начала суток в минутах (0 - 1440)
 #define EEPROM_ALARM_START_ADDRESS           (0U)           // начальный адрес в EEPROM памяти для записи настроек будильников
@@ -96,6 +99,9 @@ class EepromManager
       #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
       , uint8_t* random_on
       #endif //ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
+      #if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+      , uint8_t* button_sleep_time
+      #endif //#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
       , void (*readFavoritesSettings)(), void (*saveFavoritesSettings)(), void (*restoreDefaultSettings)())
     {
       EEPROM.begin(EEPROM_TOTAL_BYTES_USED);
@@ -130,6 +136,9 @@ class EepromManager
         #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
           EEPROM.write(EEPROM_RANDOM_ON_ADDRESS, RANDOM_SETTINGS_IN_CYCLE_MODE);
         #endif  //RANDOM_SETTINGS_IN_CYCLE_MODE        
+        #if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+          EEPROM.write(EEPROM_BUTTON_SLEEP_TIMER, 1U);
+        #endif  //#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
 
         saveFavoritesSettings(); // там уже есть EEPROM.commit();
     
@@ -161,7 +170,10 @@ class EepromManager
       if (*buttonEnabled) *buttonEnabled = EEPROM.read(EEPROM_ESP_BUTTON_ENABLED_ADDRESS);
 #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE      
       *random_on=EEPROM.read(EEPROM_RANDOM_ON_ADDRESS);
-#endif//#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE      
+#endif //#ifdef RANDOM_SETTINGS_IN_CYCLE_MODE      
+#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+      *button_sleep_time=EEPROM.read(EEPROM_BUTTON_SLEEP_TIMER);
+#endif //#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
     }
 
 #ifdef RANDOM_SETTINGS_IN_CYCLE_MODE
@@ -171,6 +183,14 @@ class EepromManager
       EEPROM.commit();
     } 
 #endif  //RANDOM_SETTINGS_IN_CYCLE_MODE 
+
+#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
+    static void Save_button_sleep_time( uint8_t* button_sleep_time)
+    {
+      EEPROM.write(EEPROM_BUTTON_SLEEP_TIMER, *button_sleep_time);
+      EEPROM.commit();
+    } 
+#endif  //#if defined(BUTTON_CAN_SET_SLEEP_TIMER) && defined(ESP_USE_BUTTON)
 
     static void SaveModesSettings(uint8_t* currentMode, ModeType modes[])
     {
