@@ -13,6 +13,10 @@
 #ifndef WiFiManager_h
 #define WiFiManager_h
 
+#define WIFI_MANAGER_LIBRARY_PROPER_TEST 
+// ^ в файле WiFiManager.cpp сделана правка, чтобы лампа могла ждать подключения к роутеру более 7 секунд (строчка ESP.wdtFeed();)
+// +-- а это - строчка для проверки внутри прошивки, что библиотека исправленная
+
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
