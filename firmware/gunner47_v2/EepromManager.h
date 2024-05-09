@@ -107,19 +107,19 @@ class EepromManager
         restoreDefaultSettings(); // а почему бы нам не восстановить настройки по умолчанию в этом месте?
 
         EEPROM.write(EEPROM_FIRST_RUN_ADDRESS, EEPROM_FIRST_RUN_MARK);
-        EEPROM.commit();
+        //EEPROM.commit();
 
         for (uint8_t i = 0; i < MODE_AMOUNT; i++)
         {
-          EEPROM.put(EEPROM_MODES_START_ADDRESS + EEPROM_ALARM_STRUCT_SIZE * i, modes[i]);
-          EEPROM.commit();
+          EEPROM.put(EEPROM_MODES_START_ADDRESS + EEPROM_MODE_STRUCT_SIZE * i, modes[i]);
+          //EEPROM.commit();
         }
 
         for (uint8_t i = 0; i < 7; i++)
         {
           EEPROM.write(EEPROM_ALARM_START_ADDRESS + EEPROM_ALARM_STRUCT_SIZE * i, alarms[i].State);
           WriteUint16(EEPROM_ALARM_START_ADDRESS + EEPROM_ALARM_STRUCT_SIZE * i + 1, alarms[i].Time);
-          EEPROM.commit();
+          //EEPROM.commit();
         }
 
         EEPROM.write(EEPROM_ESP_MODE, ESP_MODE);
@@ -131,9 +131,9 @@ class EepromManager
           EEPROM.write(EEPROM_RANDOM_ON_ADDRESS, RANDOM_SETTINGS_IN_CYCLE_MODE);
         #endif  //RANDOM_SETTINGS_IN_CYCLE_MODE        
 
-        saveFavoritesSettings();
+        saveFavoritesSettings(); // там уже есть EEPROM.commit();
     
-        EEPROM.commit();
+        //EEPROM.commit();
       }
 
       // инициализируем настройки лампы значениями из EEPROM
@@ -184,17 +184,20 @@ class EepromManager
       {
         *settChanged = false;
         *eepromTimeout = millis();
-        SaveOnFlag(onFlag);
-        SaveModesSettings(currentMode, modes);
-        if (EEPROM.read(EEPROM_CURRENT_MODE_ADDRESS) != *currentMode)
-        {
+        //SaveOnFlag(onFlag);
+        #ifndef DONT_TURN_ON_AFTER_SHUTDOWN
+        EEPROM.write(EEPROM_LAMP_ON_ADDRESS, *onFlag);
+        #endif        
+        //SaveModesSettings(currentMode, modes);
+        for (uint8_t i = 0; i < MODE_AMOUNT; i++)
+          EEPROM.put(EEPROM_MODES_START_ADDRESS + EEPROM_MODE_STRUCT_SIZE * i, modes[i]);
+        //if (EEPROM.read(EEPROM_CURRENT_MODE_ADDRESS) != *currentMode)
           EEPROM.write(EEPROM_CURRENT_MODE_ADDRESS, *currentMode);
-        }
-        saveFavoritesSettings();
-        EEPROM.commit();
+        saveFavoritesSettings(); // там уже есть EEPROM.commit();
+        //EEPROM.commit();
       }
     }
-
+    
     static void SaveAlarmsSettings(uint8_t* alarmNumber, AlarmType alarms[])
     {
       EEPROM.write(EEPROM_ALARM_START_ADDRESS + EEPROM_ALARM_STRUCT_SIZE * (*alarmNumber), alarms[*alarmNumber].State);
@@ -208,13 +211,13 @@ class EepromManager
       EEPROM.commit();
     }
 
-    static void SaveOnFlag(bool* onFlag)
-    {
-#ifndef DONT_TURN_ON_AFTER_SHUTDOWN
-      EEPROM.write(EEPROM_LAMP_ON_ADDRESS, *onFlag);
-      EEPROM.commit();
-#endif
-    }
+//    static void SaveOnFlag(bool* onFlag)
+//    {
+//#ifndef DONT_TURN_ON_AFTER_SHUTDOWN
+//      EEPROM.write(EEPROM_LAMP_ON_ADDRESS, *onFlag);
+//      EEPROM.commit();
+//#endif
+//    }
 
     static void SaveDawnMode(uint8_t* dawnMode)
     {
