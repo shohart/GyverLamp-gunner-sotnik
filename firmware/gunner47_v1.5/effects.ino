@@ -2514,7 +2514,7 @@ void MultipleStream5() { // Fractorial Fire
   //dimAll(140); // < -- затухание эффекта для последующего кадрв
   dimAll(255U - modes[currentMode].Scale * 2);
   for (uint8_t i = 1; i < WIDTH; i += 2) {
-    leds[XY( i, WIDTH - 1)] += CHSV(i * 2, 255, 255);
+    leds[XY( i, HEIGHT - 1)] += CHSV(i * 2, 255, 255);
   }
   // Noise
   noise32_x[0] += 3000;
@@ -2595,6 +2595,7 @@ void RainbowCometRoutine() {      // <- ******* для оригинальной 
 void ColorCometRoutine() {      // <- ******* для оригинальной прошивки Gunner47 ******* (раскомментить/закоментить)
   dimAll(254U); // < -- затухание эффекта для последующего кадра
   CRGB _eNs_color = CRGB::White;
+
   if (modes[currentMode].Scale < 100) _eNs_color = CHSV((modes[currentMode].Scale) * 2.57, 255, 255); // 2.57 вместо 2.55, потому что при 100 будет белый цвет
   leds[XY(CENTER_X_MINOR, CENTER_Y_MINOR)] += _eNs_color;
   leds[XY(CENTER_X_MINOR + 1, CENTER_Y_MINOR)] += _eNs_color;
@@ -2659,7 +2660,7 @@ void BBallsRoutine() {
   
   float bballsHi;
   float bballsTCycle;
-  deltaHue++; // постепенное изменение оттенка мячиков (закомментировать строчку, если не нужно)
+  if (deltaValue++ & 0x01) deltaHue++; // постепенное изменение оттенка мячиков (закомментировать строчку, если не нужно)
   dimAll(hue);
   for (uint8_t i = 0 ; i < enlargedObjectNUM ; i++) {
     //leds[XY(trackingObjectState[i], trackingObjectPosY[i])] = CRGB::Black; // off for the next loop around  // теперь пиксели гасятся в dimAll()
@@ -3568,7 +3569,8 @@ void flockRoutine(bool predatorIs) {
         // PVector velocity = boid->velocity;
         // backgroundLayer.drawLine(location.x, location.y, location.x - velocity.x, location.y - velocity.y, color);
         // effects.leds[XY(location.x, location.y)] += color;
-        drawPixelXY(location.x, location.y, color);
+        //drawPixelXY(location.x, location.y, color);
+        drawPixelXYF(location.x, location.y, color);
 
         if (applyWind) {
           boid->applyForce(wind);
@@ -3583,8 +3585,10 @@ void flockRoutine(bool predatorIs) {
         PVector location = predator.location;
         // PVector velocity = predator.velocity;
         // backgroundLayer.drawLine(location.x, location.y, location.x - velocity.x, location.y - velocity.y, color);
-        // effects.leds[XY(location.x, location.y)] += color;        
-        drawPixelXY(location.x, location.y, color);
+        // effects.leds[XY(location.x, location.y)] += color;
+
+        //drawPixelXY(location.x, location.y, color);
+        drawPixelXYF(location.x, location.y, color);
       }
 
       EVERY_N_MILLIS(333) {
@@ -3638,10 +3642,11 @@ void whirlRoutine(bool oneColor) {
     boid->update();
   
     if (oneColor)
-      drawPixelXY(boid->location.x, boid->location.y, CHSV(modes[currentMode].Scale * 2.55, (modes[currentMode].Scale == 100) ? 0U : 255U, 255U)); // цвет белый для .Scale=100
-      // артефакт текстирования. удали. drawPixelXY(boid->location.x, boid->location.y, ColorFromPalette(CRGBPalette16( CHSV(modes[currentMode].Scale * 2.55, 255U, 255U), CHSV(modes[currentMode].Scale * 2.55, 255U, 255U) , CHSV(modes[currentMode].Scale * 2.55, 255U, 255U) , CHSV(modes[currentMode].Scale * 2.55, 255U, 255U)), angle ));
+      //drawPixelXY(boid->location.x, boid->location.y, CHSV(modes[currentMode].Scale * 2.55, (modes[currentMode].Scale == 100) ? 0U : 255U, 255U)); // цвет белый для .Scale=100
+      drawPixelXYF(boid->location.x, boid->location.y, CHSV(modes[currentMode].Scale * 2.55, (modes[currentMode].Scale == 100) ? 0U : 255U, 255U)); // цвет белый для .Scale=100
     else
-      drawPixelXY(boid->location.x, boid->location.y, ColorFromPalette(*curPalette, angle + hue)); // + hue постепенно сдвигает палитру по кругу
+      //drawPixelXY(boid->location.x, boid->location.y, ColorFromPalette(*curPalette, angle + hue)); // + hue постепенно сдвигает палитру по кругу
+      drawPixelXYF(boid->location.x, boid->location.y, ColorFromPalette(*curPalette, angle + hue)); // + hue постепенно сдвигает палитру по кругу
 
     if (boid->location.x < 0 || boid->location.x >= WIDTH || boid->location.y < 0 || boid->location.y >= HEIGHT) {
       boid->location.x = random(WIDTH);
@@ -4223,8 +4228,11 @@ void bounceRoutine()
     Boid boid = boids[i];
     boid.applyForce(gravity);
     boid.update();
+    if (boid.location.x >= WIDTH) boid.location.x = boid.location.x - WIDTH; // это только
+    else if (boid.location.x < 0) boid.location.x = boid.location.x + WIDTH; // для субпиксельной версии
     CRGB color = ColorFromPalette(*curPalette, boid.colorIndex); // boid.colorIndex + hue
-    drawPixelXY((uint32_t)(boid.location.x) % WIDTH, boid.location.y, color);
+    //drawPixelXY((uint32_t)(boid.location.x) % WIDTH, boid.location.y, color);
+    drawPixelXYF(boid.location.x, boid.location.y, color);
     if (boid.location.y <= 0)
     {
       boid.location.y = 0;
@@ -5297,39 +5305,46 @@ void wu_pixel(uint32_t x, uint32_t y, CRGB * col) {      //awesome wu_pixel proc
 
 void DNARoutine()
 {
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    step = map8(modes[currentMode].Speed, 10U, 60U);
+    hue = modes[currentMode].Scale;
+    deltaHue = hue > 50U;
+    if (deltaHue)
+      hue = 101U - hue;
+    hue = 255U - map( 51U - hue, 1U, 50U, 0, 255U);
+  }
   double freq = 3000;
   float mn =255.0/13.8;
-  uint8_t speeds = map8(modes[currentMode].Speed, 10U, 60U);
   
-  fadeToBlackBy(leds, NUM_LEDS, speeds);
-
-#if HEIGHT + HEIGHT > WIDTH + 4
-  for (uint8_t i = 0; i < WIDTH; i++)
-  {
-    uint16_t ms = millis();
-    uint32_t x = beatsin16(speeds, 0, (HEIGHT - 1) * 256, 0, i * freq);
-    uint32_t y = i * 256;
-    uint32_t x1 = beatsin16(speeds, 0, (HEIGHT - 1) * 256, 0, i * freq + 32768);
-
-    CRGB col = CHSV(ms / 29 + i * 255 / (WIDTH - 1), 255, 255);// beatsin8(speeds, 60, 255U, 0, i * mn)); пропадала середина с такой яркостью
-    CRGB col1 = CHSV(ms / 29 + i * 255 / (WIDTH - 1) + 128, 255, 255);//beatsin8(speeds, 60, 255U, 0, i * mn + 128));  пропадала середина с такой яркостью
-    wu_pixel (x , y, &col);
-    wu_pixel (x1 , y, &col1);
-  }
-#else // для узких горизонтально расположенных матриц будем рисовать горизонтально
+  fadeToBlackBy(leds, NUM_LEDS, step);
+  uint16_t ms = millis();
+  
+if (deltaHue)
   for (uint8_t i = 0; i < HEIGHT; i++)
   {
-    uint16_t ms = millis();
-    uint32_t x = beatsin16(speeds, 0, (WIDTH - 1) * 256, 0, i * freq);
+    uint32_t x = beatsin16(step, 0, (WIDTH - 1) * 256, 0, i * freq);
     uint32_t y = i * 256;
-    uint32_t x1 = beatsin16(speeds, 0, (WIDTH - 1) * 256, 0, i * freq + 32768);
+    uint32_t x1 = beatsin16(step, 0, (WIDTH - 1) * 256, 0, i * freq + 32768);
 
-    CRGB col = CHSV(ms / 29 + i * 255 / (HEIGHT - 1), 255, beatsin8(speeds, 60, 255U, 0, i * mn));
-    CRGB col1 = CHSV(ms / 29 + i * 255 / (HEIGHT - 1) + 128, 255, beatsin8(speeds, 60, 255U, 0, i * mn + 128));
+    CRGB col = CHSV(ms / 29 + i * 255 / (HEIGHT - 1), 255, qadd8(hue, beatsin8(step, 60, 255U, 0, i * mn)));
+    CRGB col1 = CHSV(ms / 29 + i * 255 / (HEIGHT - 1) + 128, 255, qadd8(hue, beatsin8(step, 60, 255U, 0, i * mn + 128)));
     wu_pixel (y , x, &col);
     wu_pixel (y , x1, &col1);
   }
-#endif
+else
+  for (uint8_t i = 0; i < WIDTH; i++)
+  {
+    uint32_t x = beatsin16(step, 0, (HEIGHT - 1) * 256, 0, i * freq);
+    uint32_t y = i * 256;
+    uint32_t x1 = beatsin16(step, 0, (HEIGHT - 1) * 256, 0, i * freq + 32768);
+
+    CRGB col = CHSV(ms / 29 + i * 255 / (WIDTH - 1), 255, qadd8(hue, beatsin8(step, 60, 255U, 0, i * mn)));
+    CRGB col1 = CHSV(ms / 29 + i * 255 / (WIDTH - 1) + 128, 255, qadd8(hue, beatsin8(step, 60, 255U, 0, i * mn + 128)));
+    wu_pixel (x , y, &col);
+    wu_pixel (x1 , y, &col1);
+  }
 
   blurScreen(16);
 }
@@ -6437,4 +6452,397 @@ void fire2020Routine2(){
   ff_y++;
   if (ff_y & 0x01)
     ff_z++;
+}
+
+// ============= Эффект Кипение ===============
+// (c) SottNick
+//по мотивам LDIRKO Ленд - эффект номер 10
+//...ldir... Yaroslaw Turbin, 18.11.2020 
+//https://vk.com/ldirko
+//https://www.reddit.com/user/ldirko/
+
+void LLandRoutine(){
+  if (loadingFlag) {
+    loadingFlag = false;
+    setCurrentPalette();
+    //speedfactor = fmap(modes[currentMode].Speed, 1., 255., 20., 1.) / 16.;
+    deltaValue = 10U * ((modes[currentMode].Scale - 1U) % 11U + 1U);// значения от 1 до 11 
+    // значения от 0 до 10 = ((modes[currentMode].Scale - 1U) % 11U)
+
+  }
+  hue2 += 32U;
+  if (hue2 < 32U)
+    hue++;
+  //float t = (float)millis() / speedfactor;
+  ff_y += 16U;
+  
+  for (uint8_t y = 0; y < HEIGHT; y++)
+    for (uint16_t x = 0; x < WIDTH; x++)
+      //drawPixelXY(x, y, ColorFromPalette (*curPalette, map(inoise8(x * 50, y * 50 - t, 0) - y * 255 / (HEIGHT - 1), 0, 255, 205, 255) + hue, 255));
+      drawPixelXY(x, y, ColorFromPalette (*curPalette, map(inoise8(x * deltaValue, y * deltaValue - ff_y, ff_z) - y * 255 / (HEIGHT - 1), 0, 255, 205, 255) + hue, 255));
+  ff_z++;      
+}
+
+// ============= ЭФФЕКТ ПРИТЯЖЕНИЕ ===============
+// https://github.com/pixelmatix/aurora/blob/master/PatternAttract.h
+// Адаптация (c) SottNick
+
+// используются переменные эффекта Стая. Без него работать не будет.
+//#define ASTEROIDS_NUM 5U // количество шариков не должно превышать AVAILABLE_BOID_COUNT = 20U;
+
+void attractRoutine() {
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    setCurrentPalette();
+
+    enlargedObjectNUM = (modes[currentMode].Scale - 1U) % 11U + 1U;//(modes[currentMode].Scale - 1U) / 99.0 * (AVAILABLE_BOID_COUNT - 1U) + 1U;
+    //if (enlargedObjectNUM > AVAILABLE_BOID_COUNT) enlargedObjectNUM = AVAILABLE_BOID_COUNT;
+    
+
+      for (uint8_t i = 0; i < enlargedObjectNUM; i++) {
+        boids[i] = Boid(random(HEIGHT), 0);
+
+            boids[i] = Boid(WIDTH - 1, HEIGHT - i);
+            boids[i].mass = ((float)random8(33U, 134U)) / 100.; // random(0.1, 2); // сюда можно поставить регулятор разлёта. чем меньше число, тем дальше от центра будет вылет
+            //boids[i].velocity.x = ((float) random(40, 50)) / 100.0;
+            //boids[i].velocity.x = ((float) random(modes[currentMode].Speed, modes[currentMode].Scale+10)) / 200.0;
+            //boids[i].velocity.x = ((float) random8(modes[currentMode].Scale+45, modes[currentMode].Scale+100)) / 500.0;
+            boids[i].velocity.x = ((float) random8(46U, 100U)) / 500.0;
+            if (random8(2U)) boids[i].velocity.x *= -1.;
+            boids[i].velocity.y = 0;
+            boids[i].colorIndex = random8();//i * 32;
+            //boids[i].maxspeed = 0.380 * modes[currentMode].Speed /63.5+0.380;
+            //boids[i].maxforce = 0.015 * modes[currentMode].Speed /63.5+0.015;
+            boids[i].location.x = random8(WIDTH);//CENTER_X_MINOR + (float)random8() / 50.;
+            boids[i].location.y = random8(HEIGHT);//CENTER_Y_MINOR + (float)random8() / 50.;
+      }
+  } 
+  dimAll(220);
+  //FastLED.clear();
+
+  PVector attractLocation = PVector(WIDTH * 0.5, HEIGHT * 0.5);
+  //float attractMass = 10;
+  //float attractG = .5;
+  // перемножаем и получаем 5.
+
+  for (uint8_t i = 0; i < enlargedObjectNUM; i++) 
+  {
+    Boid boid = boids[i];
+    //Boid * boid = &boids[i];
+    PVector force = attractLocation - boid.location;   // Calculate direction of force // и вкорячиваем сюда регулировку скорости
+    float d = force.mag();                              // Distance between objects
+    d = constrain(d, 5.0f, HEIGHT*2.);                        // Limiting the distance to eliminate "extreme" results for very close or very far objects
+    force.normalize();                                  // Normalize vector (distance doesn't matter here, we just want this vector for direction)
+    float strength = (5. * boid.mass) / (d * d);      // Calculate gravitional force magnitude 5.=attractG*attractMass
+    force *= strength;                                  // Get force vector --> magnitude * direction
+    
+    boid.applyForce(force);
+
+    boid.update();
+    drawPixelXYF(boid.location.x, boid.location.y, ColorFromPalette(*curPalette, boid.colorIndex + hue));
+
+    boids[i] = boid;
+  }
+  EVERY_N_MILLIS(200) {
+    hue++;
+  }
+
+}
+
+// ============= ЭФФЕКТ Капли на стекле ===============
+// https://github.com/DmytroKorniienko/FireLamp_JeeUI/blob/master/src/effects.cpp
+void newMatrixRoutine()
+{
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    setCurrentPalette();
+
+    //enlargedObjectNUM = (modes[currentMode].Scale - 1U) % 11U + 1U;//(modes[currentMode].Scale - 1U) / 99.0 * (AVAILABLE_BOID_COUNT - 1U) + 1U;
+    enlargedObjectNUM = map(modes[currentMode].Speed, 1, 255, 1, trackingOBJECT_MAX_COUNT);
+    //speedfactor = modes[currentMode].Speed / 1048.0f + 0.05f;
+    speedfactor = 0.136f; // фиксируем хорошую скорость
+
+    for (uint8_t i = 0U; i < enlargedObjectNUM; i++)
+    {
+      trackingObjectPosX[i] = random8(WIDTH);
+      trackingObjectPosY[i] = random8(HEIGHT);
+      trackingObjectSpeedY[i] = random8(150, 250) / 100.; 
+      trackingObjectState[i] = random8(127U, 255U);
+      //trackingObjectHue[i] = hue; не похоже, что цвет используется
+    }
+   hue = modes[currentMode].Scale * 2.55;
+  } 
+  //dimAll(map(modes[currentMode].Speed, 1, 255, 250, 240));
+  dimAll(246); // для фиксированной скорости
+  
+  CHSV color;
+
+  for (uint8_t i = 0U; i < enlargedObjectNUM; i++)
+  {
+    trackingObjectPosY[i] -= trackingObjectSpeedY[i]*speedfactor;
+
+    if (modes[currentMode].Scale == 100U) {
+      color = rgb2hsv_approximate(CRGB::Gray);
+      color.val = trackingObjectState[i];
+    } else if (modes[currentMode].Scale == 1U) {
+      color = CHSV(++hue, 255, trackingObjectState[i]);
+    } else {
+      color = CHSV(hue, 255, trackingObjectState[i]);
+    }
+
+
+    drawPixelXYF(trackingObjectPosX[i], trackingObjectPosY[i], color);
+
+    #define GLUK 20 // вероятность горизонтального сдвига капли
+    if (random8() < GLUK) {
+      //trackingObjectPosX[i] = trackingObjectPosX[i] + random(-1, 2);
+      trackingObjectPosX[i] = (uint8_t)(trackingObjectPosX[i] + WIDTH - 1U + random8(3U)) % WIDTH ;
+      trackingObjectState[i] = random8(196,255);
+    }
+
+    if(trackingObjectPosY[i] < -1) {
+      trackingObjectPosX[i] = random8(WIDTH);
+      trackingObjectPosY[i] = random8(HEIGHT - HEIGHT /2, HEIGHT);
+      trackingObjectSpeedY[i] = random8(150, 250) / 100.; 
+      trackingObjectState[i] = random8(127U, 255U);
+      //trackingObjectHue[i] = hue; не похоже, что цвет используется
+    }
+  }
+}
+
+//-------- Эффект Дымовые шашки ----------- aka "Детские сны"
+// (c) Stepko
+// https://editor.soulmatelights.com/gallery/505
+// https://github.com/DmytroKorniienko/FireLamp_JeeUI/blob/master/src/effects.cpp
+
+void smokeballsRoutine(){
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    setCurrentPalette();
+    
+    enlargedObjectNUM = enlargedObjectNUM = (modes[currentMode].Scale - 1U) % 11U + 1U;
+    speedfactor = fmap(modes[currentMode].Speed, 1., 255., .02, .1); // попробовал разные способы управления скоростью. Этот максимально приемлемый, хотя и сильно тупой.
+    //randomSeed(millis());
+    for (byte j = 0; j < enlargedObjectNUM; j++) {
+      trackingObjectShift[j] =  random((WIDTH * 10) - ((WIDTH / 3) * 20)); // сумма trackingObjectState + trackingObjectShift не должна выскакивать за макс.Х
+      //trackingObjectSpeedX[j] = EffectMath::randomf(5., (float)(16 * WIDTH)); //random(50, 16 * WIDTH) / random(1, 10);
+      trackingObjectSpeedX[j] = (float)random(25, 80 * WIDTH) / 5.;
+      trackingObjectState[j] = random((WIDTH / 2) * 10, (WIDTH / 3) * 20);
+      trackingObjectHue[j] = random8();//(9) * 28;
+      trackingObjectPosX[j] = trackingObjectShift[j];
+    }
+  }
+  
+  //shiftUp();
+  for (byte x = 0; x < WIDTH; x++) {
+    for (float y = (float)HEIGHT; y > 0.; y-= speedfactor) {
+      drawPixelXY(x, y, getPixColorXY(x, y - 1));
+    }
+  }
+  
+  dimAll(240);
+  blurScreen(20);
+  for (byte j = 0; j < enlargedObjectNUM; j++) {
+    trackingObjectPosX[j] = beatsin16((uint8_t)(trackingObjectSpeedX[j] * (speedfactor * 5.)), trackingObjectShift[j], trackingObjectState[j] + trackingObjectShift[j], trackingObjectHue[j]*256, trackingObjectHue[j]*8);
+    drawPixelXYF(trackingObjectPosX[j] / 10., 0.05, ColorFromPalette(*curPalette, trackingObjectHue[j]));
+  }
+
+  EVERY_N_SECONDS(20){
+    for (byte j = 0; j < enlargedObjectNUM; j++) {
+      trackingObjectShift[j] += random(-20,20);
+      trackingObjectHue[j] += 28;
+    }
+  }
+
+  loadingFlag = random8() > 253U;
+}
+
+// ------------- Nexus --------------
+// (c) kostyamat
+// https://github.com/DmytroKorniienko/FireLamp_JeeUI/blob/master/src/effects.cpp
+
+//#define enlargedOBJECT_MAX_COUNT            (WIDTH * 2)          // максимальное количество червяков
+//uint8_t enlargedObjectNUM;                                   // выбранное количество червяков
+//float trackingObjectPosX[trackingOBJECT_MAX_COUNT]; // тут будет позиция головы 
+//float trackingObjectPosY[trackingOBJECT_MAX_COUNT]; // тут будет позиция головы
+//float trackingObjectSpeedX[trackingOBJECT_MAX_COUNT]; // тут будет скорость червяка
+//uint8_t trackingObjectHue[trackingOBJECT_MAX_COUNT]; // тут будет цвет червяка
+//uint8_t trackingObjectState[trackingOBJECT_MAX_COUNT]; тут будет направление червяка
+
+void nexusReset(uint8_t i){
+      trackingObjectHue[i] = random8();
+      trackingObjectState[i] = random8(4);
+      //trackingObjectSpeedX[i] = (255. + random8()) / 255.;
+      trackingObjectSpeedX[i] = (float)random8(5,11) / 70 + speedfactor; // делаем частицам немного разное ускорение и сразу пересчитываем под общую скорость
+        switch (trackingObjectState[i]) {
+          case B01:
+              trackingObjectPosY[i] = HEIGHT;
+              trackingObjectPosX[i] = random8(WIDTH);
+            break;
+          case B00:
+              trackingObjectPosY[i] = -1;
+              trackingObjectPosX[i] = random8(WIDTH);
+            break;
+          case B10:
+              trackingObjectPosX[i] = WIDTH;
+              trackingObjectPosY[i] = random8(HEIGHT);
+            break;
+          case B11:
+              trackingObjectPosX[i] = -1;
+              trackingObjectPosY[i] = random8(HEIGHT);
+            break;
+        }
+}
+
+void nexusRoutine(){
+  if (loadingFlag)
+  {
+    loadingFlag = false;
+    speedfactor = fmap(modes[currentMode].Speed, 1, 255, 0.1, .33);//(float)modes[currentMode].Speed / 555.0f + 0.001f;
+    
+    enlargedObjectNUM = (modes[currentMode].Scale - 1U) / 99.0 * (enlargedOBJECT_MAX_COUNT - 1U) + 1U;
+    if (enlargedObjectNUM > enlargedOBJECT_MAX_COUNT) enlargedObjectNUM = enlargedOBJECT_MAX_COUNT;
+    for (uint8_t i = 0; i < enlargedObjectNUM; i++){
+      trackingObjectPosX[i] = random8(WIDTH);
+      trackingObjectPosY[i] = random8(HEIGHT);
+      trackingObjectSpeedX[i] = (float)random8(5,11) / 70 + speedfactor; // делаем частицам немного разное ускорение и сразу пересчитываем под общую скорость
+      trackingObjectHue[i] = random8();
+      trackingObjectState[i] = random8(4);//     B00           // задаем направление
+                                           // B10     B11
+                                           //     B01
+    }
+    deltaValue = 255U - map(modes[currentMode].Speed, 1, 255, 11, 33);
+    
+  }
+  dimAll(deltaValue);
+
+  for (uint8_t i = 0; i < enlargedObjectNUM; i++){
+        switch (trackingObjectState[i]) {
+          case B01:
+            trackingObjectPosY[i] -= trackingObjectSpeedX[i];
+            if (trackingObjectPosY[i] <= -1)
+              nexusReset(i);
+            break;
+          case B00:
+            trackingObjectPosY[i] += trackingObjectSpeedX[i];
+            if (trackingObjectPosY[i] >= HEIGHT)
+              nexusReset(i);
+            break;
+          case B10:
+            trackingObjectPosX[i] -= trackingObjectSpeedX[i];
+            if (trackingObjectPosX[i] <= -1)
+              nexusReset(i);
+            break;
+          case B11:
+            trackingObjectPosX[i] += trackingObjectSpeedX[i];
+            if (trackingObjectPosX[i] >= WIDTH)
+              nexusReset(i);
+            break;
+        }
+    drawPixelXYF(trackingObjectPosX[i], trackingObjectPosY[i],  CHSV(trackingObjectHue[i], 255U, 255));
+  }
+}
+
+
+// ------------ Эффект "Тихий Океан"
+//  "Pacifica" перенос кода kostyamat
+//  Gentle, blue-green ocean waves.
+//  December 2019, Mark Kriegsman and Mary Corey March.
+//  For Dan.
+// https://raw.githubusercontent.com/FastLED/FastLED/master/examples/Pacifica/Pacifica.ino
+// https://github.com/DmytroKorniienko/FireLamp_JeeUI/blob/master/src/effects.cpp
+
+static const TProgmemRGBPalette16 pacifica_palette_1 FL_PROGMEM =
+    { 0x000507, 0x000409, 0x00030B, 0x00030D, 0x000210, 0x000212, 0x000114, 0x000117,
+      0x000019, 0x00001C, 0x000026, 0x000031, 0x00003B, 0x000046, 0x14554B, 0x28AA50 };
+static const TProgmemRGBPalette16 pacifica_palette_2 FL_PROGMEM =
+    { 0x000507, 0x000409, 0x00030B, 0x00030D, 0x000210, 0x000212, 0x000114, 0x000117,
+      0x000019, 0x00001C, 0x000026, 0x000031, 0x00003B, 0x000046, 0x0C5F52, 0x19BE5F };
+static const TProgmemRGBPalette16 pacifica_palette_3 FL_PROGMEM =
+    { 0x000208, 0x00030E, 0x000514, 0x00061A, 0x000820, 0x000927, 0x000B2D, 0x000C33,
+      0x000E39, 0x001040, 0x001450, 0x001860, 0x001C70, 0x002080, 0x1040BF, 0x2060FF };
+
+// Add one layer of waves into the led array
+void pacifica_one_layer(CRGB *leds, const TProgmemRGBPalette16& p, uint16_t cistart, uint16_t wavescale, uint8_t bri, uint16_t ioff)
+{
+  uint16_t ci = cistart;
+  uint16_t waveangle = ioff;
+  uint16_t wavescale_half = (wavescale / 2) + 20;
+  for( uint16_t i = 0; i < NUM_LEDS; i++) {
+    waveangle += 250;
+    uint16_t s16 = sin16( waveangle ) + 32768;
+    uint16_t cs = scale16( s16 , wavescale_half ) + wavescale_half;
+    ci += cs;
+    uint16_t sindex16 = sin16( ci) + 32768;
+    uint8_t sindex8 = scale16( sindex16, 240);
+    CRGB c = ColorFromPalette( p, sindex8, bri, LINEARBLEND);
+    leds[i] += c;
+  }
+}
+
+// Add extra 'white' to areas where the four layers of light have lined up brightly
+void pacifica_add_whitecaps(CRGB *leds)
+{
+  uint8_t basethreshold = beatsin8( 9, 55, 65);
+  uint8_t wave = beat8( 7 );
+
+  for( uint16_t i = 0; i < NUM_LEDS; i++) {
+    uint8_t threshold = scale8( sin8( wave), 20) + basethreshold;
+    wave += 7;
+    uint8_t l = leds[i].getAverageLight();
+    if( l > threshold) {
+      uint8_t overage = l - threshold;
+      uint8_t overage2 = qadd8( overage, overage);
+      leds[i] += CRGB( overage, overage2, qadd8( overage2, overage2));
+    }
+  }
+}
+
+// Deepen the blues and greens
+void pacifica_deepen_colors(CRGB *leds)
+{
+  for( uint16_t i = 0; i < NUM_LEDS; i++) {
+    leds[i].blue = scale8( leds[i].blue,  145);
+    leds[i].green= scale8( leds[i].green, 200);
+    leds[i] |= CRGB( 2, 5, 7);
+  }
+}
+
+void pacificRoutine()
+{
+  // Increment the four "color index start" counters, one for each wave layer.
+  // Each is incremented at a different speed, and the speeds vary over time.
+  static uint16_t sCIStart1, sCIStart2, sCIStart3, sCIStart4;
+  static uint32_t sLastms = 0;
+  uint32_t ms = GET_MILLIS();
+  uint32_t deltams = ms - sLastms;
+  sLastms = ms;
+  uint16_t speedfactor1 = beatsin16(3, 179, 269);
+  uint16_t speedfactor2 = beatsin16(4, 179, 269);
+  uint32_t deltams1 = (deltams * speedfactor1) / map(modes[currentMode].Speed, 1, 255, 620, 60);
+  uint32_t deltams2 = (deltams * speedfactor2) / map(modes[currentMode].Speed, 1, 255, 620, 60);
+  uint32_t deltams21 = (deltams1 + deltams2) / 2;
+  sCIStart1 += (deltams1 * beatsin88(1011,10,13));
+  sCIStart2 -= (deltams21 * beatsin88(777,8,11));
+  sCIStart3 -= (deltams1 * beatsin88(501,5,7));
+  sCIStart4 -= (deltams2 * beatsin88(257,4,6));
+
+  // Clear out the LED array to a dim background blue-green
+  fill_solid( leds, NUM_LEDS, CRGB( 2, 6, 10));
+
+  // Render each of four layers, with different scales and speeds, that vary over time
+  pacifica_one_layer(&*leds, pacifica_palette_1, sCIStart1, beatsin16( 3, 11 * 256, 14 * 256), beatsin8( 10, 70, 130), 0-beat16( 301) );
+  pacifica_one_layer(&*leds, pacifica_palette_2, sCIStart2, beatsin16( 4,  6 * 256,  9 * 256), beatsin8( 17, 40,  80), beat16( 401) );
+  pacifica_one_layer(&*leds, pacifica_palette_3, sCIStart3, 6 * 256, beatsin8( 9, 10,38), 0-beat16(503));
+  pacifica_one_layer(&*leds, pacifica_palette_3, sCIStart4, 5 * 256, beatsin8( 8, 10,28), beat16(601));
+
+  // Add brighter 'whitecaps' where the waves lines up more
+  pacifica_add_whitecaps(&*leds);
+
+  // Deepen the blues and greens a bit
+  pacifica_deepen_colors(&*leds);
+  blurScreen(20);
 }

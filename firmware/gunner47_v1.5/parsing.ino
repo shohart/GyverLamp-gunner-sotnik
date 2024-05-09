@@ -301,7 +301,8 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
     #ifdef OTA
     else if (!strncmp_P(inputBuffer, PSTR("OTA"), 3))
     {
-      if (espMode == 1U){// && otaManager.RequestOtaUpdate()){ по идее, нужен положительный ответ от менеджера
+      //if (espMode == 1U) пускай обновление работает даже в режиме точки доступа
+      // && otaManager.RequestOtaUpdate()){ по идее, нужен положительный ответ от менеджера
         otaManager.RequestOtaUpdate(); // но из-за двойного запроса нихрена не работает
         delay(70);
         //if (otaManager.RequestOtaUpdate()) //по идее, нужен положительный ответ от менеджера
@@ -315,9 +316,9 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
         }
         else
           showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
-      }
-      else
-        showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
+      //}
+      //else
+      //  showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
     }
     #endif // OTA
 

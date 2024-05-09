@@ -40,7 +40,7 @@ class OtaManager
 
     bool RequestOtaUpdate()                                 // пользователь однократно запросил обновление по воздуху; возвращает true, когда переходит в режим обновления - startOtaUpdate()
     {
-      if (espMode != 1U)
+/*      if (espMode != 1U) интересно, зачем было запрещать обновление через точку доступа?!
       {
         #ifdef GENERAL_DEBUG
         LOG.print(F("Запрос обновления по воздуху поддерживается только в режиме ESP_MODE = 1\n"));
@@ -48,6 +48,7 @@ class OtaManager
 
         return false;
       }
+*/
 
       if (OtaFlag == OtaPhase::None)
       {
