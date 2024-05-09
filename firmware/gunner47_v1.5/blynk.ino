@@ -4,7 +4,7 @@
 #define CYCLE_TIMER             (60U)         // Интервал смены эффектов 60 секунд
 #define CYCLE_TIMER_PLUS        (0U)          // + случайное время от нуля до 0U секунд
 #define CYCLE_1ST_EFFECT        (2U)          // Эффекты до "2. Смена цвета" не будут демонстрироваться
-#define CYCLE_LAST_EFFECT       (78U)         // Эффекты после "78. Блуждающий кубик" не будут демонстрироваться
+#define CYCLE_LAST_EFFECT       (EFF_CUBE)    // Эффекты после "Блуждающий кубик" не будут демонстрироваться
 
 BLYNK_CONNECTED()
 {
@@ -176,6 +176,7 @@ void processParams(char *prefix, const char *paramValue)
       MqttManager::needToPublish = true;
     }
     #endif
+    FastLED.setBrightness(modes[currentMode].Brightness);    
     
     updateRemoteBlynkParams();
   }
@@ -186,13 +187,13 @@ void processParams(char *prefix, const char *paramValue)
       modes[currentMode].Speed      = 99U;
       modes[currentMode].Scale      = 38U;        
       otaManager.RequestOtaUpdate();
-      FastLED.delay(70);
+      delay(70);
       //if (otaManager.RequestOtaUpdate()) по идее, нужен положительный ответ от менеджера, но он не поступает с первого раза...
       otaManager.RequestOtaUpdate();
       //{
         currentMode = EFF_MATRIX;                             // принудительное включение режима "Матрица" для индикации перехода в режим обновления по воздуху
         FastLED.clear();
-        FastLED.delay(1);
+        delay(1);
         ONflag = true;
         changePower();
       //}

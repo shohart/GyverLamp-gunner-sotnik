@@ -12,6 +12,8 @@ uint8_t noise3d[NUM_LAYERSMAX][WIDTH][HEIGHT];     // двухслойная м�
 uint8_t line[WIDTH];                               // свойство пикселей в размер строки матрицы
 uint8_t shiftHue[HEIGHT];                          // свойство пикселей в размер столбца матрицы
 uint8_t shiftValue[HEIGHT];                        // свойство пикселей в размер столбца матрицы ещё одно
+uint16_t ff_x, ff_y, ff_z;                         // большие счётчики
+
 
 //массивы состояния объектов, которые могут использоваться в любом эффекте
 #define trackingOBJECT_MAX_COUNT                         (100U)  // максимальное количество отслеживаемых объектов (очень влияет на расход памяти)
@@ -280,11 +282,11 @@ void sparklesRoutine()
 {
   for (uint8_t i = 0; i < modes[currentMode].Scale; i++)
   {
-    uint8_t x = random(0U, WIDTH);
-    uint8_t y = random(0U, HEIGHT);
+    uint8_t x = random8(WIDTH);
+    uint8_t y = random8(HEIGHT);
     if (getPixColorXY(x, y) == 0U)
     {
-      leds[XY(x, y)] = CHSV(random(0U, 255U), 255U, 255U);
+      leds[XY(x, y)] = CHSV(random8(), 255U, 255U);
     }
   }
   //fader(FADE_OUT_SPEED);
@@ -568,7 +570,7 @@ void rainbowDiagonalRoutine()
   if (loadingFlag)
   {
     loadingFlag = false;
-    FastLED.clear();
+    //FastLED.clear();
   }
 
   hue += 8;
@@ -618,8 +620,8 @@ void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color) {
 CRGBPalette16 palette;
 CRGB _pulse_color;
 uint8_t currentRadius = 4;
-uint8_t pulsCENTER_X_MINOR = random8(WIDTH - 5U) + 3U;
-uint8_t pulsCENTER_Y_MINOR = random8(HEIGHT - 5U) + 3U;
+uint8_t pulsCenterX = random8(WIDTH - 5U) + 3U;
+uint8_t pulsCenterY = random8(HEIGHT - 5U) + 3U;
 //uint16_t _rc; вроде, не используется
 //uint8_t _pulse_hue; заменено на deltaHue из общих переменных
 //uint8_t _pulse_hueall; заменено на hue2 из общих переменных
@@ -674,11 +676,11 @@ void pulseRoutine(uint8_t PMode) {
             _pulse_color = CHSV(deltaHue, _sat, _dark);
             break;
         }
-        drawCircle(pulsCENTER_X_MINOR, pulsCENTER_Y_MINOR, i, _pulse_color  );
+        drawCircle(pulsCenterX, pulsCenterY, i, _pulse_color  );
       }
     } else {
-      pulsCENTER_X_MINOR = random8(WIDTH - 5U) + 3U;
-      pulsCENTER_Y_MINOR = random8(HEIGHT - 5U) + 3U;
+      pulsCenterX = random8(WIDTH - 5U) + 3U;
+      pulsCenterY = random8(HEIGHT - 5U) + 3U;
       hue2 += deltaHue2;
       hue = random8(0U, 255U);
       currentRadius = random8(3U, 9U);
@@ -1621,7 +1623,7 @@ void colorsRoutine2()
       //for (uint16_t i = 0U; i < NUM_LEDS; i++)
       //  leds[i] = CHSV(hue, 255U, 255U);
       fillAll(CHSV(hue, 255U, 255U));
-      FastLED.delay(1);  
+      delay(1);  
     }
     else
       step++;
@@ -1638,7 +1640,7 @@ void colorsRoutine2()
       //for (uint16_t i = 0U; i < NUM_LEDS; i++)
       //  leds[i] = CHSV(hue, 255U, 255U);
       fillAll(CHSV(hue, 255U, 255U));
-      FastLED.delay(1);  
+      delay(1);  
     }
     else
       if (step >= deltaValue){
@@ -2240,7 +2242,7 @@ void whiteColorStripeRoutine()
   {
     loadingFlag = false;
     FastLED.clear();
-    //FastLED.delay(1);
+    //delay(1);
 
     uint8_t centerY =  (uint8_t)round(HEIGHT / 2.0F) - 1U;// max((uint8_t)round(HEIGHT / 2.0F) - 1, 0); нахрена тут максимум было вычислять? для ленты?!
     uint8_t bottomOffset = (uint8_t)(!(HEIGHT & 0x01));// && (HEIGHT > 1)); и высота больше единицы. супер!                     // если высота матрицы чётная, линий с максимальной яркостью две, а линии с минимальной яркостью снизу будут смещены на один ряд
@@ -2277,7 +2279,7 @@ void showWarning(
   enum BlinkState { OFF = 0, ON = 1 } blinkState = BlinkState::OFF;
   FastLED.setBrightness(WARNING_BRIGHTNESS);                // установка яркости для предупреждения
   FastLED.clear();
-  FastLED.delay(2);
+  delay(2);
   FastLED.show();
 
   //for (uint16_t i = 0U; i < NUM_LEDS; i++)                  // установка цвета всех диодов в WARNING_COLOR
@@ -2292,15 +2294,15 @@ void showWarning(
       blinkTimer = millis();
       blinkState = (BlinkState)!blinkState;
       FastLED.setBrightness(blinkState == BlinkState::OFF ? 0 : WARNING_BRIGHTNESS);
-      FastLED.delay(1);
+      delay(1);
       FastLED.show();
     }
-    FastLED.delay(50);
+    delay(50);
   }
 
   FastLED.clear();
   FastLED.setBrightness(ONflag ? modes[currentMode].Brightness : 0);  // установка яркости, которая была выставлена до вызова предупреждения
-  FastLED.delay(1);
+  delay(1);
   FastLED.show();
   loadingFlag = true;                                       // принудительное отображение текущего эффекта (того, что был активен перед предупреждением)
 }
@@ -2639,7 +2641,7 @@ void BBallsRoutine() {
   if (loadingFlag)
   {
     loadingFlag = false;
-    FastLED.clear();
+    //FastLED.clear();
     enlargedObjectNUM = (modes[currentMode].Scale - 1U) / 99.0 * (enlargedOBJECT_MAX_COUNT - 1U) + 1U;
     if (enlargedObjectNUM > enlargedOBJECT_MAX_COUNT) enlargedObjectNUM = enlargedOBJECT_MAX_COUNT;
     for (uint8_t i = 0 ; i < enlargedObjectNUM ; i++) {             // Initialize variables
@@ -3174,7 +3176,7 @@ public:
         return d.length();
     }
     float length() const {
-        return sqrt3(x * x + y * y);
+        return sqrt(x * x + y * y);
     }
 
     float mag() const {
@@ -3319,7 +3321,7 @@ class Boid {
       PVector steer = PVector(0, 0);
       int count = 0;
       // For every boid in the system, check if it's too close
-      for (uint8_t i = 0; i < boidCount; i++) {
+      for (int i = 0; i < boidCount; i++) {
         Boid other = boids[i];
         if (!other.enabled)
           continue;
@@ -3355,7 +3357,7 @@ class Boid {
     PVector align(Boid boids [], uint8_t boidCount) {
       PVector sum = PVector(0, 0);
       int count = 0;
-      for (uint8_t i = 0; i < boidCount; i++) {
+      for (int i = 0; i < boidCount; i++) {
         Boid other = boids[i];
         if (!other.enabled)
           continue;
@@ -3383,7 +3385,7 @@ class Boid {
     PVector cohesion(Boid boids [], uint8_t boidCount) {
       PVector sum = PVector(0, 0);   // Start with empty vector to accumulate all locations
       int count = 0;
-      for (uint8_t i = 0; i < boidCount; i++) {
+      for (int i = 0; i < boidCount; i++) {
         Boid other = boids[i];
         if (!other.enabled)
           continue;
@@ -3513,12 +3515,10 @@ class Boid {
 static const uint8_t AVAILABLE_BOID_COUNT = 20U;
 Boid boids[AVAILABLE_BOID_COUNT]; 
 
-    static const uint8_t boidCount = 10;
-    Boid predator;
-
-    PVector wind;
-//    byte hue = 0; будем использовать сдвиг от эффектов Радуга
-    bool predatorPresent = true;
+static const uint8_t boidCount = 10;
+Boid predator;
+PVector wind;
+bool predatorPresent = true;
 
 void flockRoutine(bool predatorIs) {
     if (loadingFlag)
@@ -3526,19 +3526,19 @@ void flockRoutine(bool predatorIs) {
       loadingFlag = false;
       setCurrentPalette();
 
-      for (uint8_t i = 0; i < boidCount; i++) {
+      for (int i = 0; i < boidCount; i++) {
         boids[i] = Boid(WIDTH - 1U, HEIGHT - 1U);
         boids[i].maxspeed = 0.380 * modes[currentMode].Speed /127.0+0.380/2;
         boids[i].maxforce = 0.015 * modes[currentMode].Speed /127.0+0.015/2;
       }
-      predatorPresent = predatorIs && random(0, 2) >= 1;
-      if (predatorPresent) {
-        predator = Boid(WIDTH - 1U, HEIGHT - 1U);
+      predatorPresent = predatorIs && random8(2U);
+      //if (predatorPresent) { нужно присвоить ему значения при первом запуске, иначе он с нулями будет жить
+        predator = Boid(WIDTH + WIDTH - 1, HEIGHT + HEIGHT - 1); // я хз как распределить параметры в этой функции. там, вроде бы, и координаты и скорости одновременно
         predator.maxspeed = 0.385 * modes[currentMode].Speed /127.0+0.385/2;
         predator.maxforce = 0.020 * modes[currentMode].Speed /127.0+0.020/2;
         predator.neighbordist = 8.0; // было 16.0 и хищник гонял по одной линии всегда
         predator.desiredseparation = 0.0;
-      }
+      //}
     }
     
       blurScreen(15); // @Palpalych советует делать размытие
@@ -3554,7 +3554,7 @@ void flockRoutine(bool predatorIs) {
       CRGB color = ColorFromPalette(*curPalette, hue);
       
 
-      for (uint8_t i = 0; i < boidCount; i++) {
+      for (int i = 0; i < boidCount; i++) {
         Boid * boid = &boids[i];
 
         if (predatorPresent) {
@@ -3596,14 +3596,15 @@ void flockRoutine(bool predatorIs) {
       }
 }
 
+
 // ============= ЭФФЕКТ ВИХРИ ===============
 // https://github.com/pixelmatix/aurora/blob/master/PatternFlowField.h
 // Адаптация (c) SottNick
 // используются переменные эффекта Стая. Без него работать не будет.
 
-uint16_t ff_x;
-uint16_t ff_y;
-uint16_t ff_z;
+//uint16_t ff_x; вынесены в общий пул
+//uint16_t ff_y;
+//uint16_t ff_z;
 
 static const uint8_t ff_speed = 1; // чем выше этот параметр, тем короче переходы (градиенты) между цветами. 1 - это самое красивое
 static const uint8_t ff_scale = 26; // чем больше этот параметр, тем больше "языков пламени" или как-то так. 26 - это норм
@@ -4877,7 +4878,7 @@ void PicassoGenerate(bool reset){
   {
     loadingFlag = false;
     //setCurrentPalette();    
-    FastLED.clear();
+    //FastLED.clear();
     enlargedObjectNUM = (modes[currentMode].Scale - 1U) / 99.0 * (enlargedOBJECT_MAX_COUNT - 1U) + 1U;
     //enlargedObjectNUM = (modes[currentMode].Scale - 1U) % 11U / 10.0 * (enlargedOBJECT_MAX_COUNT - 1U) + 1U;
     if (enlargedObjectNUM > enlargedOBJECT_MAX_COUNT) enlargedObjectNUM = enlargedOBJECT_MAX_COUNT;
@@ -6371,4 +6372,69 @@ void oscillatingRoutine() {
           setCellColors(x, y);
       }
   }
+}
+
+
+// ============= Огонь 2020 ===============
+// (c) SottNick
+//сильно по мотивам https://pastebin.com/RG0QGzfK
+//Perlin noise fire procedure by Yaroslaw Turbin
+//https://www.reddit.com/r/FastLED/comments/hgu16i/my_fire_effect_implementation_based_on_perlin/
+
+#define SPARKLES_NUM  (WIDTH / 8U) // не более чем  enlargedOBJECT_MAX_COUNT (WIDTH * 2)
+//float   trackingObjectPosX[SPARKLES_NUM]; // это для искорок. по идее должны быть uint8_t, но были только такие
+//float   trackingObjectPosY[SPARKLES_NUM];
+//uint8_t shiftHue[HEIGHT];
+//uint16_t ff_y, ff_z; используем для сдвига нойза переменные из общих
+//uint8_t deltaValue;
+
+void fire2020Routine2(){
+  if (loadingFlag) {
+    loadingFlag = false;
+    if (modes[currentMode].Scale > 100U) modes[currentMode].Scale = 100U; // чтобы не было проблем при прошивке без очистки памяти
+    /*if (modes[currentMode].Scale == 100U)
+      deltaValue = random8(9U);
+    else
+      deltaValue = modes[currentMode].Scale * 0.0899; // /100.0F * ((sizeof(firePalettes)/sizeof(TProgmemRGBPalette16 *))-0.01F))*/
+    deltaValue = modes[currentMode].Scale * 0.0899;// /100.0F * ((sizeof(palette_arr) /sizeof(TProgmemRGBPalette16 *))-0.01F));
+    if (deltaValue == 3U ||deltaValue == 4U)
+      curPalette =  palette_arr[deltaValue]; // (uint8_t)(modes[currentMode].Scale/100.0F * ((sizeof(palette_arr) /sizeof(TProgmemRGBPalette16 *))-0.01F))];
+    else
+      curPalette = firePalettes[deltaValue]; // (uint8_t)(modes[currentMode].Scale/100.0F * ((sizeof(firePalettes)/sizeof(TProgmemRGBPalette16 *))-0.01F))];
+    deltaValue = (((modes[currentMode].Scale - 1U) % 11U + 1U) << 4U) - 8U; // ширина языков пламени (масштаб шума Перлина)
+    deltaHue = map(deltaValue, 8U, 168U, 8U, 84U); // высота языков пламени должна уменьшаться не так быстро, как ширина
+    step = map(255U-deltaValue, 87U, 247U, 4U, 32U); // вероятность смещения искорки по оси ИКС
+    for (uint8_t j = 0; j < HEIGHT; j++) {
+      shiftHue[j] = (HEIGHT - 1 - j) * 255 / (HEIGHT - 1); // init colorfade table
+    }
+
+    for (uint8_t i = 0; i < SPARKLES_NUM; i++) {
+        trackingObjectPosY[i] = random8(HEIGHT);
+        trackingObjectPosX[i] = random8(WIDTH);
+    }
+  }
+  for (uint8_t i = 0; i < WIDTH; i++) {
+    for (uint8_t j = 0; j < HEIGHT; j++) {
+      leds[XY(i,HEIGHT-1U-j)] = ColorFromPalette(*curPalette, qsub8(inoise8(i * deltaValue, (j+ff_y+random8(2)) * deltaHue, ff_z), shiftHue[j]), 255U);
+    } 
+  }
+
+  //вставляем искорки из отдельного массива
+  for (uint8_t i = 0; i < SPARKLES_NUM; i++) {
+    //leds[XY(trackingObjectPosX[i],trackingObjectPosY[i])] += ColorFromPalette(*curPalette, random(156, 255));   //trackingObjectHue[i] 
+    if (trackingObjectPosY[i] > 3U){
+      leds[XY(trackingObjectPosX[i], trackingObjectPosY[i])] = leds[XY(trackingObjectPosX[i], 3U)];
+      leds[XY(trackingObjectPosX[i], trackingObjectPosY[i])].fadeToBlackBy( trackingObjectPosY[i]*2U );
+    }
+    trackingObjectPosY[i]++;
+    if (trackingObjectPosY[i] >= HEIGHT){
+      trackingObjectPosY[i] = random8(4U);
+      trackingObjectPosX[i] = random8(WIDTH);
+    }
+    if (!random8(step))
+      trackingObjectPosX[i] = (WIDTH + (uint8_t)trackingObjectPosX[i] + 1U - random8(3U)) % WIDTH;
+  }
+  ff_y++;
+  if (ff_y & 0x01)
+    ff_z++;
 }

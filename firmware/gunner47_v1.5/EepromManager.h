@@ -90,7 +90,7 @@ class EepromManager
       void (*readFavoritesSettings)(), void (*saveFavoritesSettings)(), void (*restoreDefaultSettings)())
     {
       EEPROM.begin(EEPROM_TOTAL_BYTES_USED);
-      FastLED.delay(50);
+      delay(50);
 
       // записываем в EEPROM начальное состояние настроек, если их там ещё нет
       if (EEPROM.read(EEPROM_FIRST_RUN_ADDRESS) != EEPROM_FIRST_RUN_MARK)

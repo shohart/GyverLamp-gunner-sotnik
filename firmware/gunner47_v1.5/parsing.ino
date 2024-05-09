@@ -70,8 +70,8 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
       loadingFlag = true;
       settChanged = true;
       eepromTimeout = millis();
-      FastLED.clear();
-      FastLED.delay(1);
+      //FastLED.clear();
+      //delay(1);
       sendCurrent(inputBuffer);
       FastLED.setBrightness(modes[currentMode].Brightness);
 
@@ -303,13 +303,13 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
     {
       if (espMode == 1U){// && otaManager.RequestOtaUpdate()){ по идее, нужен положительный ответ от менеджера
         otaManager.RequestOtaUpdate(); // но из-за двойного запроса нихрена не работает
-        FastLED.delay(70);
+        delay(70);
         //if (otaManager.RequestOtaUpdate()) //по идее, нужен положительный ответ от менеджера
         otaManager.RequestOtaUpdate(); // но если уже был один ответ из двух в прошлый раз, то сейчас второй лучше не проверять
         if (OtaManager::OtaFlag == OtaPhase::InProgress) {
           currentMode = EFF_MATRIX;                             // принудительное включение режима "Матрица" для индикации перехода в режим обновления по воздуху
           FastLED.clear();
-          FastLED.delay(1);
+          delay(1);
           ONflag = true;
           changePower();
         }
@@ -424,10 +424,12 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
             TextTicker = "ОШИБКА ФОРМАТА ВРЕМЕНИ\n";
         currentMode = EFF_TEXT;                             // принудительное включение режима "Бегущая строка" для сообщения результате
         FastLED.clear();
-        FastLED.delay(1);
+        delay(1);
         ONflag = true;
         changePower();
 */        
+          #else
+            showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)          
           #endif // USE_MANUAL_TIME_SETTING
         }
         #ifdef USE_SECRET_COMMANDS
@@ -470,6 +472,97 @@ void processInputBuffer(char *inputBuffer, char *outputBuffer, bool generateOutp
             #ifdef USE_BLYNK
             updateRemoteBlynkParams();
             #endif
+          }
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-alarm"), 9)&& (BUFF.length() > 12) && (char)inputBuffer[10] == '='){
+            // 0000000000111111
+            // 0123456789012345
+            // TXT-alarm4=07:25
+            // TXT-alarm5=on
+            // TXT-alarm2=off
+            bool isError = false;
+            uint8_t alarmNum = (char)inputBuffer[9] - '0' - 1U;
+            if (strstr_P(inputBuffer, PSTR("on")) - inputBuffer == 11 && alarmNum < 7U)
+            {
+              alarms[alarmNum].State = true;
+            }
+            else if (strstr_P(inputBuffer, PSTR("off")) - inputBuffer == 11 && alarmNum < 7U)
+            {
+              alarms[alarmNum].State = false;
+            }
+            else if (BUFF.length() > 15)
+            {
+              uint8_t mtH = BUFF.substring(11, 13).toInt();
+              uint8_t mtM = BUFF.substring(14, 16).toInt();
+              if (mtH < 24U && mtM < 60U && alarmNum < 7U){
+                alarms[alarmNum].Time = mtH * 60U + mtM;
+                alarms[alarmNum].State = true;
+              }
+              else
+                isError = true;
+            }
+            else 
+              isError = true;
+              
+            if (isError){
+              #ifdef USE_BLYNK
+                Blynk.setProperty(V6, "label", String("Ошибка!"));
+              #endif              
+              showWarning(CRGB::Red, 2000U, 500U);      // мигание красным цветом 2 секунды (ошибка)
+            }
+            else {
+              #ifdef USE_BLYNK
+                Blynk.setProperty(V6, "label", String("Рассвет в ")+String(alarmNum+1U)+String("й д.н. ")+String(alarms[alarmNum].State ? String((uint8_t)(alarms[alarmNum].Time / 600U))+String((uint8_t)(alarms[alarmNum].Time / 60U % 10U))+':'+String(alarms[alarmNum].Time % 60U / 10U)+String(alarms[alarmNum].Time % 60U % 10U) : "ВЫКЛЮЧЕН"));
+              #endif              
+              showWarning(CRGB::Blue, 2000U, 500U);     // мигание голубым цветом 2 секунды (2 раза) - будильник установлен
+              
+              EepromManager::SaveAlarmsSettings(&alarmNum, alarms);
+            }
+          }
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-dawn="), 9)){
+            memcpy(buff, &inputBuffer[9], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 10
+            uint8_t temp = atoi(buff);
+            if (temp) {
+              //dawnOffsets[dawnMode] PROGMEM = {5, 10, 15, 20, 25, 30, 40, 50, 60};
+              dawnMode = 0U;
+              for (uint8_t i = 1; i < 9; i++)
+                if (temp >= pgm_read_byte(&dawnOffsets[i]))
+                  dawnMode = i;
+                else
+                  break;
+            EepromManager::SaveDawnMode(&dawnMode);
+              showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+            }
+            else{
+              showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
+            }
+            #ifdef USE_BLYNK
+              Blynk.setProperty(V6, "label", String("Рассвет начнётся за ") + String(pgm_read_byte(&dawnOffsets[dawnMode])) + String(" мин."));
+            #endif                
+          }
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-timer=off"), 13)){
+            TimerManager::TimerRunning = false;
+            showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+            #ifdef USE_BLYNK
+              Blynk.setProperty(V6, "label", String("Таймер отключен"));
+            #endif                
+          }
+          else if (!strncmp_P(inputBuffer, PSTR("TXT-timer="), 10)){
+            memcpy(buff, &inputBuffer[10], strlen(inputBuffer));   // взять подстроку, состоящую последних символов строки inputBuffer, начиная с символа 11
+            uint16_t temp = atoi(buff);
+            if (ONflag && temp) {
+              TimerManager::TimeToFire = millis() + temp * 60UL * 1000UL;
+              TimerManager::TimerRunning = true;
+              showWarning(CRGB::Blue, 2000U, 500U);                    // мигание синим цветом 2 секунды
+              #ifdef USE_BLYNK
+                Blynk.setProperty(V6, "label", String("Выключение через ") + String(temp) + String(" мин."));
+              #endif                
+            }
+            else{
+              showWarning(CRGB::Red, 2000U, 500U);                     // мигание красным цветом 2 секунды (ошибка)
+              #ifdef USE_BLYNK
+                Blynk.setProperty(V6, "label", TimerManager::TimerRunning ? String("Выключение через ") + String((uint16_t)floor((TimerManager::TimeToFire - millis()) / 60000U)) + String(" мин.") : String("Таймер отключен"));
+              #endif                
+            }
           }
         #endif // USE_SECRET_COMMANDS
         else
