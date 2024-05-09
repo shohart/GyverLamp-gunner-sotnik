@@ -4,7 +4,7 @@
 #define CYCLE_TIMER             (60U)         // Интервал смены эффектов 60 секунд
 #define CYCLE_TIMER_PLUS        (0U)          // + случайное время от нуля до 0U секунд
 #define CYCLE_1ST_EFFECT        (2U)          // Эффекты до "2. Смена цвета" не будут демонстрироваться
-#define CYCLE_LAST_EFFECT       (EFF_CUBE)    // Эффекты после "Блуждающий кубик" не будут демонстрироваться
+#define CYCLE_LAST_EFFECT       (EFF_RAINBOW_VER)    // Эффекты после "Радуга" не будут демонстрироваться
 
 BLYNK_CONNECTED()
 {
