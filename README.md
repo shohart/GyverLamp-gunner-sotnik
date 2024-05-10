@@ -128,7 +128,7 @@
 О: На форуме по [этой ссылке](https://community.alexgyver.ru/threads/wifi-lampa-budilnik-obsuzhdenie-proshivki-ot-gunner47.2418/post-33652).
 
 ### Ссылки по этому проекту
-[Вся информация и общение по данной прошивке](https://community.alexgyver.ru/threads/wifi-lampa-budilnik-obsuzhdenie-proshivki-ot-gunner47.2418/post-33652).
+[Вся информация и общение по данной прошивке 87² эффектов в 1 (gunner47 v.2)](https://community.alexgyver.ru/threads/wifi-lampa-budilnik-obsuzhdenie-proshivki-ot-gunner47.2418/post-33652).
 
 <a id="chapter-6"></a>
 ## Полезная информация
