@@ -118,7 +118,7 @@
 В: Я совсем новичок! Что мне делать с Ардуиной, где взять все программы?  
 О: Читай и смотри видос http://alexgyver.ru/arduino-first/
 
-В: Вылетает ошибка загрузки / компиляции!
+В: Вылетает ошибка загрузки / компиляции. Как исправить?
 О: Читай тут: https://alexgyver.ru/arduino-first/#step-5
 
 В: Сколько стоит?  
@@ -128,11 +128,9 @@
 О: На форуме по [этой ссылке](https://community.alexgyver.ru/threads/wifi-lampa-budilnik-obsuzhdenie-proshivki-ot-gunner47.2418/post-33652).
 
 ### Ссылки по этому проекту
+[Вся информация и общение по данной прошивке](https://community.alexgyver.ru/threads/wifi-lampa-budilnik-obsuzhdenie-proshivki-ot-gunner47.2418/post-33652).
 
 <a id="chapter-6"></a>
 ## Полезная информация
-* [Мой сайт](http://alexgyver.ru/)
-* [Основной YouTube канал](https://www.youtube.com/channel/UCgtAOyEQdAyjvm9ATCi_Aig?sub_confirmation=1)
-* [YouTube канал про Arduino](https://www.youtube.com/channel/UC4axiS76D784-ofoTdo5zOA?sub_confirmation=1)
-* [Мои видеоуроки по пайке](https://www.youtube.com/playlist?list=PLOT_HeyBraBuMIwfSYu7kCKXxQGsUKcqR)
-* [Мои видеоуроки по Arduino](http://alexgyver.ru/arduino_lessons/)
+* [Сайт создателя проекта](http://alexgyver.ru/)
+* [Его основной YouTube канал](https://www.youtube.com/channel/UCgtAOyEQdAyjvm9ATCi_Aig?sub_confirmation=1)
