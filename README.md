@@ -1,4 +1,3 @@
-![PROJECT_PHOTO](https://community.alexgyver.ru/attachments/brickgame-jpg.11795/)
 # Прошивка 87² эффектов в 1
 # (gunner47 v.2)
 
