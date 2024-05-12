@@ -1,6 +1,9 @@
 # Прошивка 87² эффектов в 1
 # (gunner47 v.2)
-![PROJECT_PHOTO](https://repository-images.githubusercontent.com/798424525/4db87f45-1498-4c61-a972-f9784f24d011)
+[![PROJECT_PHOTO](https://repository-images.githubusercontent.com/798424525/4db87f45-1498-4c61-a972-f9784f24d011)](https://youtu.be/5UEgOOK4EUU)
+[Video demonstration 1](https://youtu.be/5UEgOOK4EUU)
+
+[Video demonstration 2](https://youtu.be/pGawfN8Eib0)
 
 # Крутая WiFi лампа на esp8266 своими руками
 * [Описание проекта](#chapter-0)
