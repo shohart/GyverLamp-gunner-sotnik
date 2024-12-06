@@ -5,51 +5,13 @@
  * Зависит от библиотек:
  *   ESPAsyncTCP https://github.com/me-no-dev/ESPAsyncTCP
  *   AsyncTCP https://github.com/me-no-dev/AsyncTCP
- * Лампа подписана на топик: LedLamp/LedLamp_xxxxxxxx/cmnd, где xxxxxxxx - ESP.getChipID(); payload - строка, содержащая те же команды, что отправляются приложением (регистр важен):
- *   P_ON - включить матрицу
- *   P_OFF - выключить матрицу
- *   EFF0 - сделать активным эффект №0 (нумерация с нуля)
- *   BRI44 - установить яркость 44; диапазон [1..255]
- *   SPD3 - установить скорость 3; диапазон [1..255]
- *   SCA1 - установить масштаб 1; диапазон [1..100]
- *   ALM_SET1 ON - завести будильник 1 (понедельник); ON - вкл, OFF - выкл
- *   ALM_SET1 390 - установить время будильника 1 (понедельник) на 06:30 (количество минут от начала суток)
- *   DAWN1 - установить "рассвет" за 5 минут до будильника (1 = 5 минут - номер опции в выпадающем списке в приложении, нумерация с единицы)
- *   TMR_SET 1 3 300 - установить таймер; описание параметров - см. команду TMR ниже
- *   FAV_SET 1 60 120 0 0 1 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 0 - установить режим "избранное", параметры - см. команду FAV ниже
- *   BTN ON - разблокировать кнопку на лампе
- *   BTN OFF - заблокировать кнопку на лампе
- * Лампа отправляет своё состояние сразу после включения и после каждого изменения в топик LedLamp/LedLamp_<ChipId>/state; payload: 
- *  "CURR 7 14 4 50 1 1 1 0 1 21:25:50", где:
- *     CURR - идентификатор команды, CURR - текущее состояние лампы
- *     7 - номер текущего эффекта
- *     14 - яркость
- *     4 - скорость
- *     50 - масштаб
- *     1 - признак "матрица включена"
- *     1 - режим ESP_MODE
- *     1 - признак USE_NTP (пытаться синхронизировать время по серверам времени в интернете)
- *     0 - признак "работает таймер"
- *     1 - признак "кнопка разблокирована"
- *     21:25:50 - текущее время (если не синхронизировано, показывает время от старта модуля)
- *  "ALMS 1 0 0 0 0 0 0 0 390 0 0 0 0 0 0 1"
- *     ALMS - идентификатор команды, ALMS - настройки будильников
- *     первые 7 цифр - признак "будильник заведён" по дням недели, начиная с понедельника
- *     последующие 7 цифр - время в минутах от начала суток, на которое заведён будильник (по дням недели); 390 = 06:30
- *     последняя цифра - опция "рассвет за ... минут", цифра указывает на номер значения в выпадающем списке: 1 - 5 минут, 2 - 10 минут... (см. в приложении)
- *  "TMR 1 3 300"
- *     TMR - идентификатор команды, TMR - таймер
- *     1 - признак "таймер взведён"
- *     3 - опция "выключить лампу через ...", цифра указывает на номер значения в выпадающем списке: 1 - не выключать, 2 - 1 минута... (см. в приложении)
- *     300 - количество секунд, через которое выключится лампа (0 - не выключать)
- *  "FAV 1 60 120 0 0 1 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 0............МНОГО НОЛИКОВ И ЕДИНИЧЕК... 1 0"
- *     FAV - идентификатор команды, FAV - избранное
- *     1 - режим "избранное" включен
- *     60 - интервал смены эффектов в секундах
- *     120 - случайный разброс смены эффектов (применяется дополнительно к интервалу) в секундах
- *     0 - признак "запомнить состояние" вкл/выкл режима "избранное" в энергонезависимую память
- *     оставшиеся цифры - признак (0/1) "эффект №... добавлен в избранные", где номер цифры соотвтетсвует номеру эффекта в списке (см. приложение)
- *     КОЛИЧЕСТВО ЦИФЕРОК ДОЛЖНО СООТВЕТСТВОВАТЬ КОЛИЧЕСТВУ ЭФФЕКТОВ!!!!!!
+ * Лампа подписана на топики:
+ *   LedLamp/LedLamp_xxxxxxxx/cmnd - общий топик для включения/выключения и других команд
+ *   LedLamp/LedLamp_xxxxxxxx/bri/cmnd - топик для регулировки яркости
+ *   LedLamp/LedLamp_xxxxxxxx/spd/cmnd - топик для регулировки скорости
+ *   LedLamp/LedLamp_xxxxxxxx/scl/cmnd - топик для регулировки масштаба
+ *   LedLamp/LedLamp_xxxxxxxx/eff/cmnd - топик для установки номера эффекта
+ * Все топики будут подписаны на соответствующие команды и значения.
 */
 
 #include <AsyncMqttClient.h>
@@ -59,6 +21,10 @@
 
 static const char TopicBase[]          PROGMEM = "LedLamp";                     // базовая часть топиков
 static const char TopicCmnd[]          PROGMEM = "cmnd";                        // часть командных топиков (входящие команды лампе)
+static const char TopicBriCmnd[]       PROGMEM = "bri/cmnd";                    // топик для регулировки яркости
+static const char TopicSpdCmnd[]       PROGMEM = "spd/cmnd";                    // топик для регулировки скорости
+static const char TopicSclCmnd[]       PROGMEM = "scl/cmnd";                    // топик для регулировки масштаба
+static const char TopicEffCmnd[]       PROGMEM = "eff/cmnd";                    // топик для установки номера эффекта
 static const char TopicState[]         PROGMEM = "state";                       // часть топиков состояния (ответ от лампы)
 
 static const char MqttServer[]         PROGMEM = "192.168.0.100";               // строка с IP адресом MQTT брокера
@@ -66,7 +32,6 @@ static const uint16_t MqttPort                 = 1883U;                         
 static const char MqttUser[]           PROGMEM = "";                            // пользователь MQTT брокера
 static const char MqttPassword[]       PROGMEM = "";                            // пароль пользователя MQTT брокера
 static const char MqttClientIdPrefix[] PROGMEM = "LedLamp_";                    // id клиента MQTT брокера (к нему будет добавлен ESP.getChipId)
-
 
 class MqttManager
 {
@@ -86,6 +51,10 @@ class MqttManager
     static char* mqttUser;
     static char* mqttPassword;
     static char* topicInput;                                                    // TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicCmnd
+    static char* topicBriInput;                                                 // TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicBriCmnd
+    static char* topicSpdInput;                                                 // TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicSpdCmnd
+    static char* topicSclInput;                                                 // TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicSclCmnd
+    static char* topicEffInput;                                                 // TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicEffCmnd
     static char* topicOutput;                                                   // TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicState
     static char* clientId;
     static char* lampInputBuffer;                                               // ссылка на inputBuffer для записи в него пришедшей MQTT команды и последующей её обработки лампой
@@ -97,7 +66,6 @@ class MqttManager
     static bool allocStr_P(char **str, PGM_P src);
     static SendCurrentDelegate sendCurrentDelegate;
 };
-
 
 void MqttManager::setupMqtt(AsyncMqttClient* mqttClient, char* lampInputBuffer, SendCurrentDelegate sendCurrentDelegate)
 {
@@ -129,81 +97,84 @@ void MqttManager::setupMqtt(AsyncMqttClient* mqttClient, char* lampInputBuffer, 
   topicInput = (char*)malloc(topicLength);
   sprintf_P(topicInput, PSTR("%s/%s/%s"), TopicBase, clientId, TopicCmnd);      // topicInput = TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicCmnd
 
+  topicLength = sizeof(TopicBase) + 1 + strlen(clientId) + 1 + sizeof(TopicBriCmnd) + 1;
+  topicBriInput = (char*)malloc(topicLength);
+  sprintf_P(topicBriInput, PSTR("%s/%s/%s"), TopicBase, clientId, TopicBriCmnd); // topicBriInput = TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicBriCmnd
+
+  topicLength = sizeof(TopicBase) + 1 + strlen(clientId) + 1 + sizeof(TopicSpdCmnd) + 1;
+  topicSpdInput = (char*)malloc(topicLength);
+  sprintf_P(topicSpdInput, PSTR("%s/%s/%s"), TopicBase, clientId, TopicSpdCmnd); // topicSpdInput = TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicSpdCmnd
+
+  topicLength = sizeof(TopicBase) + 1 + strlen(clientId) + 1 + sizeof(TopicSclCmnd) + 1;
+  topicSclInput = (char*)malloc(topicLength);
+  sprintf_P(topicSclInput, PSTR("%s/%s/%s"), TopicBase, clientId, TopicSclCmnd); // topicSclInput = TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicSclCmnd
+
+  topicLength = sizeof(TopicBase) + 1 + strlen(clientId) + 1 + sizeof(TopicEffCmnd) + 1;
+  topicEffInput = (char*)malloc(topicLength);
+  sprintf_P(topicEffInput, PSTR("%s/%s/%s"), TopicBase, clientId, TopicEffCmnd); // topicEffInput = TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicEffCmnd
+
   topicLength = sizeof(TopicBase) + 1 + strlen(clientId) + 1 + sizeof(TopicState) + 1;
   topicOutput = (char*)malloc(topicLength);
-  sprintf_P(topicOutput, PSTR("%s/%s/%s"), TopicBase, clientId, TopicState);    // topicOutput = TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicState
+  sprintf_P(topicOutput, PSTR("%s/%s/%s"), TopicBase, clientId, TopicState);     // topicOutput = TopicBase + '/' + MqttClientIdPrefix + ESP.getChipId + '/' + TopicState
 
-  #ifdef GENERAL_DEBUG
-  LOG.printf_P(PSTR("MQTT топик для входящих команд: %s\n"), topicInput);
-  LOG.printf_P(PSTR("MQTT топик для исходящих ответов лампы: %s\n"), topicOutput);
-  #endif
+  mqttClient->subscribe(topicInput, 1);  // Подписка на общий топик
+  mqttClient->subscribe(topicBriInput, 1);  // Подписка на топик для яркости
+  mqttClient->subscribe(topicSpdInput, 1);  // Подписка на топик для скорости
+  mqttClient->subscribe(topicSclInput, 1);  // Подписка на топик для масштаба
+  mqttClient->subscribe(topicEffInput, 1);  // Подписка на топик для эффекта
 
   mqttClient->onConnect(onMqttConnect);
   mqttClient->onDisconnect(onMqttDisconnect);
   mqttClient->onMessage(onMqttMessage);
 }
 
-void MqttManager::mqttConnect()
-{
-  if ((!mqttLastConnectingAttempt) || (millis() - mqttLastConnectingAttempt >= connectionTimeout))
-  {
-    #ifdef GENERAL_DEBUG
-    LOG.print(F("Подключение к MQTT брокеру \""));
-    LOG.print(MqttManager::mqttServer);
-    LOG.print(':');
-    LOG.print(MqttPort);
-    LOG.println(F("\"..."));
-    #endif
-    mqttClient->disconnect();
-    mqttClient->connect();
-    mqttLastConnectingAttempt = millis();
-  }
-}
-
-bool MqttManager::publish(const char *topic, const char *value)
-{
-  if (mqttClient->connected())
-  {
-    #ifdef GENERAL_DEBUG
-    LOG.print(F("Отправлено MQTT: топик \""));
-    LOG.print(topic);
-    LOG.print(F("\", значение \""));
-    LOG.print(value);
-    LOG.println('"');
-    LOG.println();
-    #endif
-
-    return mqttClient->publish(topic, qos, true, value, 0) != 0;
-  }
-
-  return false;
-}
-
-void MqttManager::onMqttConnect(bool sessionPresent)
-{
-  #ifdef GENERAL_DEBUG
-  LOG.println(F("Подключено к MQTT брокеру"));
-  #endif
-  mqttLastConnectingAttempt = 0;
-
-  mqttClient->subscribe(topicInput, 1);
-  publishState();
-}
-
-void MqttManager::onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
-{
-  #ifdef GENERAL_DEBUG
-  LOG.println(F("Отключено от MQTT брокера"));
-  #endif
-}
-
 void MqttManager::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
-  if (payload != NULL)                                      // сохраняем пришедшее MQTT сообщение для дальнейшей обработки
+  if (payload != NULL)
   {
     strncpy(lampInputBuffer, payload, len);
     lampInputBuffer[len] = '\0';
     needToPublish = true;
+  }
+
+  // Проверка топика и обработка команд
+  if (strncmp(topic, topicInput, strlen(topicInput)) == 0)
+  {
+    // Обработка команды включения/выключения
+    if (strcmp(payload, "ON") == 0)
+    {
+      // Включение лампы
+      turnOnLamp();
+    }
+    else if (strcmp(payload, "OFF") == 0)
+    {
+      // Выключение лампы
+      turnOffLamp();
+    }
+  }
+  else if (strncmp(topic, topicBriInput, strlen(topicBriInput)) == 0)
+  {
+    // Обработка команды яркости
+    int brightness = atoi(payload);
+    setBrightness(brightness);
+  }
+  else if (strncmp(topic, topicSpdInput, strlen(topicSpdInput)) == 0)
+  {
+    // Обработка команды скорости
+    int speed = atoi(payload);
+    setSpeed(speed);
+  }
+  else if (strncmp(topic, topicSclInput, strlen(topicSclInput)) == 0)
+  {
+    // Обработка команды масштаба
+    int scale = atoi(payload);
+    setScale(scale);
+  }
+  else if (strncmp(topic, topicEffInput, strlen(topicEffInput)) == 0)
+  {
+    // Обработка команды эффекта
+    int effect = atoi(payload);
+    setEffect(effect);
   }
 
   #ifdef GENERAL_DEBUG
@@ -211,139 +182,51 @@ void MqttManager::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessa
   LOG.print(F(" топик \""));
   LOG.print(topic);
   LOG.print("\"");
-  /*
-  LOG.print(F(" qos: "));
-  LOG.println(properties.qos);
-  LOG.print(F(" dup: "));
-  LOG.println(properties.dup);
-  LOG.print(F(" retain: "));
-  LOG.println(properties.retain);
-  LOG.print(F(" len: "));
-  LOG.println(len);
-  LOG.print(F(" index: "));
-  LOG.println(index);
-  LOG.print(F(" total: "));
-  LOG.println(total);
-  */
   LOG.print(F(", значение \""));
   LOG.print(lampInputBuffer);
   LOG.println("\"");
-  LOG.println();
   #endif
+}
+
+void MqttManager::setBrightness(int value)
+{
+  // Код для установки яркости
+}
+
+void MqttManager::setSpeed(int value)
+{
+  // Код для установки скорости
+}
+
+void MqttManager::setScale(int value)
+{
+  // Код для установки масштаба
+}
+
+void MqttManager::setEffect(int value)
+{
+  // Код для установки эффекта
+}
+
+void MqttManager::turnOnLamp()
+{
+  // Код для включения лампы
+}
+
+void MqttManager::turnOffLamp()
+{
+  // Код для выключения лампы
+}
+
+bool MqttManager::publish(const char *topic, const char *value)
+{
+  return mqttClient->publish(topic, qos, true, value);
 }
 
 void MqttManager::publishState()
 {
-  if (mqttBuffer == NULL || strlen(mqttBuffer) <= 0)
-  {
-    sendCurrentDelegate(mqttBuffer);                        // если буфер MQTT ответа не задан, но метод MQTT публикации вызван, закполняем его текущим состоянием лампы
-  }
-
-  if (mqttBuffer != NULL && strlen(mqttBuffer) > 0)
-  {
-    publish(topicOutput, mqttBuffer);                       // публикация буфера MQTT ответа
-    mqttBuffer[0] = '\0';                                   // очистка буфера
-    needToPublish = false;                                  // сброс флага для предотвращения повторной публикации
-  }
+  // Код для публикации состояния лампы
 }
 
-char* MqttManager::byteToHex(char *out, uint8_t value)
-{
-  uint8_t b;
+bool MqttManager::needToPublish = false;
 
-  b = value >> 4;
-  if (b < 10)
-  {
-    out[0] = '0' + b;
-  }
-  else
-  {
-    out[0] = 'A' + (b - 10);
-  }
-  b = value & 0x0F;
-  if (b < 10)
-  {
-    out[1] = '0' + b;
-  }
-  else
-  {
-    out[1] = 'A' + (b - 10);
-  }
-  out[2] = '\0';
-
-  return out;
-}
-
-bool MqttManager::allocStr(char **str, const char *src)
-{
-  if (src && *src)
-  {
-    if (*str)
-    {
-      void *ptr = realloc(*str, strlen(src) + 1);
-
-      if (!ptr)
-      {
-        return false;
-      }
-      *str = (char*)ptr;
-    }
-    else
-    {
-      *str = (char*)malloc(strlen(src) + 1);
-      if (!*str)
-      {
-        return false;
-      }
-    }
-    strcpy(*str, src);
-  }
-  else
-  {
-    if (*str)
-    {
-      free(*str);
-      *str = NULL;
-    }
-  }
-
-  return true;
-}
-
-bool MqttManager::allocStr_P(char **str, PGM_P src)
-{
-  if (src && pgm_read_byte(src))
-  {
-    if (*str)
-    {
-      void *ptr = realloc(*str, strlen_P(src) + 1);
-
-      if (!ptr)
-      {
-        return false;
-      }
-      *str = (char*)ptr;
-    }
-    else
-    {
-      *str = (char*)malloc(strlen_P(src) + 1);
-      if (!*str)
-      {
-        return false;
-      }
-    }
-    strcpy_P(*str, src);
-  }
-  else
-  {
-    if (*str)
-    {
-      free(*str);
-      *str = NULL;
-    }
-  }
-
-  return true;
-}
-
-#endif
